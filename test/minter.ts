@@ -17,16 +17,29 @@ describe("Minter", () => {
   });
   it("Should deploy minter", async () => {
     let minterFactory = await ethers.getContractFactory("Minter");
-    minter = await minterFactory.deploy(deiBox.address);
+    minter = await minterFactory.deploy(deiBox.address, token.address);
   });
-  it("Should mint DEI", async () => {
+  it("Should mint zero token", async () => {
     let beforeBalance = await token.balanceOf(await minter.deiBox());
     let tx = await minter.mint();
-    let receipt = await tx.wait();
-    let emittedAddress = BigNumber.from(receipt.logs[0].data.slice(0, 66));
-    let emittedAmount = BigNumber.from(receipt.logs[0].data.slice(66));
+    await tx.wait();
     let afterBalance = await token.balanceOf(await minter.deiBox());
-    expect(deiBox.address).to.eq(emittedAddress);
-    expect(afterBalance.sub(beforeBalance)).to.eq(emittedAmount);
+    expect(afterBalance.sub(beforeBalance)).to.eq(0);
+  });
+  it("Should set new emission to 10 token", async () => {
+    let tx = await minter.setEmission(BigNumber.from("10000000000000000000"));
+    await tx.wait();
+    expect(await minter.emission()).to.eq(
+      BigNumber.from("10000000000000000000")
+    );
+  });
+  it("Should mint 10 token", async () => {
+    let beforeBalance = await token.balanceOf(await minter.deiBox());
+    let tx = await minter.mint();
+    await tx.wait();
+    let afterBalance = await token.balanceOf(await minter.deiBox());
+    expect(afterBalance.sub(beforeBalance)).to.eq(
+      BigNumber.from("10000000000000000000")
+    );
   });
 });

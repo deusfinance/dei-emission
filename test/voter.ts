@@ -16,12 +16,12 @@ describe("Voter", () => {
     let deiBoxFactory = await ethers.getContractFactory("DeiBox");
     deiBox = await deiBoxFactory.deploy();
     await deiBox.deployed();
-    let minterFactory = await ethers.getContractFactory("Minter");
-    minter = await minterFactory.deploy(deiBox.address);
-    await minter.deployed();
     let tokenFactory = await ethers.getContractFactory("TokenTest");
     token = await tokenFactory.deploy();
     await token.deployed();
+    let minterFactory = await ethers.getContractFactory("Minter");
+    minter = await minterFactory.deploy(deiBox.address, token.address);
+    await minter.deployed();
     let veFactory = await ethers.getContractFactory("VeTest");
     ve = await veFactory.deploy(token.address);
     await ve.deployed();
