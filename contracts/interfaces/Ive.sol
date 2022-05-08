@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: GPL3.0-or-later
+
+pragma solidity 0.8.13;
+
 interface Ive {
     function token() external view returns (address);
 
