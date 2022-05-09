@@ -36,10 +36,12 @@ describe("Dei Box", async () => {
     );
   });
   it("Should take 5 tokens from user", async () => {
-    let beforeBalance = await token.balanceOf(user1.address)
+    let beforeBalance = await token.balanceOf(user1.address);
     let beforeBlanaceDeiBox = await token.balanceOf(deiBox.address);
-    let approveTx = await token.connect(user1).approve(deiBox.address, BigNumber.from("5000000000000000000"));
-    await approveTx.wait()
+    let approveTx = await token
+      .connect(user1)
+      .approve(deiBox.address, BigNumber.from("5000000000000000000"));
+    await approveTx.wait();
     await deiBox.take(user1.address, BigNumber.from("5000000000000000000"));
     let afterBalance = await token.balanceOf(user1.address);
     let afterBalanceDeiBox = await token.balanceOf(deiBox.address);
@@ -47,5 +49,12 @@ describe("Dei Box", async () => {
     let diffDeiBox = afterBalanceDeiBox.sub(beforeBlanaceDeiBox);
     expect(diff).to.equal(BigNumber.from("5000000000000000000"));
     expect(diff).to.equal(diffDeiBox);
+  });
+
+  it("should fail to send if not Lender", async () => {
+    let sendTx = deiBox
+      .connect(user1)
+      .send(user1.address, BigNumber.from("5000000000000000000"));
+    await expect(sendTx).to.be.reverted;
   });
 });
