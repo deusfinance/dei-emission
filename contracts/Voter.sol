@@ -37,6 +37,10 @@ contract Voter {
         int256 weight
     ) internal {
         require(proposedLendings[lendingId], "Voter: LENDING_NOT_SUBMITTED");
+        require(
+            Ive(ve).isApprovedOrOwner(msg.sender, tokenId),
+            "Voter: TOKEN_ID_NOT_APPROVED"
+        );
         lendingVotes[lendingId] += weight;
     }
 
