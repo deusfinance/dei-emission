@@ -1,5 +1,6 @@
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ethers } from "hardhat";
-import { DeiBox, ERC20, TokenTest } from "../typechain";
+import { DeiBox, ERC20, Minter, TokenTest } from "../typechain";
 
 async function deployTokenTest(): Promise<TokenTest> {
   let tokenFactory = await ethers.getContractFactory("TokenTest");
@@ -15,4 +16,18 @@ async function deployDeiBox(token: ERC20): Promise<DeiBox> {
   return deiBox;
 }
 
-export { deployTokenTest, deployDeiBox };
+async function deployMinter(
+  token: ERC20,
+  deiBox: DeiBox,
+  admin: SignerWithAddress
+): Promise<Minter> {
+  let minterFactory = await ethers.getContractFactory("Minter");
+  let minter = await minterFactory.deploy(
+    deiBox.address,
+    token.address,
+    admin.address
+  );
+  return minter;
+}
+
+export { deployTokenTest, deployDeiBox, deployMinter };
