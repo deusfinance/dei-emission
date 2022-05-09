@@ -121,4 +121,9 @@ describe("Voter", () => {
     let diff = beforeVotePower.sub(afterVotePower);
     expect(diff.gte(weight)).to.be.true; // at least weight amount must be the diff
   });
+  it("should fail to use vote weight more than actual vote power", async () => {
+    let weight = BigNumber.from("5000000000000000001");
+    let voteTx = voter.connect(user3).vote(poolId1, [veTokeId3], [weight]);
+    await expect(voteTx).to.be.revertedWith("Voter: INSUFFICIENT_VOTING_POWER");
+  });
 });

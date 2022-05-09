@@ -49,6 +49,10 @@ contract Voter {
             Ive(ve).isApprovedOrOwner(msg.sender, tokenId),
             "Voter: TOKEN_ID_NOT_APPROVED"
         );
+        require(
+            getVotePower(tokenId) >= abs(weight),
+            "Voter: INSUFFICIENT_VOTING_POWER"
+        );
         powerUsed[tokenId] += abs(weight);
         lendingVotes[lendingId] += weight;
     }
