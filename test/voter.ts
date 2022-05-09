@@ -94,6 +94,14 @@ describe("Voter", () => {
     let pool1Votes = await voter.getTotalVotesOfLending(poolId1);
     expect(votingWeight).to.equal(pool1Votes);
   });
+  it("should vote -10 power on lending #2", async () => {
+    await voter
+      .connect(user2)
+      .vote(poolId1, [veTokeId2], [BigNumber.from(-10)]);
+
+    let pool1Votes = await voter.getTotalVotesOfLending(poolId1);
+    expect(pool1Votes).to.be.equal(BigNumber.from(90));
+  });
   it("should fail to vote on lending #2 ", async () => {
     let voteTx = voter
       .connect(me)
@@ -104,5 +112,13 @@ describe("Voter", () => {
     await voter.connect(me).submitLending(poolId2);
     let isProposed = await voter.proposedLendings(poolId2);
     expect(isProposed).to.be.true;
+  });
+  it("should decrease tokenId voting power after successful vote", async () => {
+    let weight = BigNumber.from(10);
+    let beforeVotePower = await voter.connect(user2).getVotePower(veTokeId2);
+    await voter.connect(user2).vote(poolId2, [veTokeId2], [weight]);
+    let afterVotePower = await voter.connect(user2).getVotePower(veTokeId2);
+    let diff = beforeVotePower.sub(afterVotePower);
+    expect(diff.gte(weight)).to.be.true; // at least weight amount must be the diff
   });
 });

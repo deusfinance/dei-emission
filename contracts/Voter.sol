@@ -9,6 +9,7 @@ contract Voter {
 
     mapping(uint256 => bool) public proposedLendings; // its true if the lending id is proposed to be whitelisted
     mapping(uint256 => int256) public lendingVotes; // lendingId => totalLendingVotes
+    mapping(uint256 => uint256) public powerUsed; // tokenId => amount of voting power used
 
     constructor(address minter_, address ve_) {
         minter = minter_;
@@ -28,7 +29,14 @@ contract Voter {
             proposedLendings[lendingId] == false,
             "Voter: ALREADY_SUBMITTED"
         );
+        // todo: check min veDeus balance
+        // todo: receive min fee amount
         proposedLendings[lendingId] = true;
+    }
+
+    function getVotePower(uint256 tokenId) public view returns (uint256) {
+        uint256 totalPower = Ive(ve).balanceOfNFT(tokenId);
+        return totalPower - powerUsed[tokenId];
     }
 
     function _vote(
@@ -41,6 +49,7 @@ contract Voter {
             Ive(ve).isApprovedOrOwner(msg.sender, tokenId),
             "Voter: TOKEN_ID_NOT_APPROVED"
         );
+        powerUsed[tokenId] += abs(weight);
         lendingVotes[lendingId] += weight;
     }
 
@@ -57,8 +66,8 @@ contract Voter {
             _vote(lendingId, tokenIds[i], weights[i]);
         }
     }
-    // function distribute(address _gauge) public {}
-    // function distribute() external {}
-    // function distribute(uint256 start, uint256 finish) public {}
-    // function distribute(address[] memory _gauges) external {}
+
+    function abs(int256 x) private pure returns (uint256) {
+        return x >= 0 ? uint256(x) : uint256(-x);
+    }
 }
