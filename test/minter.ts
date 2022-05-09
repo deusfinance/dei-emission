@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
+import { deployDeiBox } from "../scripts/deployHelpters";
 import { DeiBox, Minter, TokenTest } from "../typechain";
 
 describe("Minter", () => {
@@ -11,8 +12,7 @@ describe("Minter", () => {
     let tokenFactory = await ethers.getContractFactory("TokenTest");
     token = await tokenFactory.deploy();
     await token.deployed();
-    let deiBoxFactory = await ethers.getContractFactory("DeiBox");
-    deiBox = await deiBoxFactory.deploy();
+    deiBox = await deployDeiBox(token);
     await deiBox.deployed();
   });
   it("Should deploy minter", async () => {

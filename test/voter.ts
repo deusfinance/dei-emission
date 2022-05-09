@@ -2,6 +2,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
+import { deployDeiBox, deployTokenTest } from "../scripts/deployHelpters";
 import { DeiBox, Minter, TokenTest, VeTest, Voter } from "../typechain";
 
 describe("Voter", () => {
@@ -13,12 +14,9 @@ describe("Voter", () => {
   let deiBox: DeiBox;
   before(async () => {
     [me] = await ethers.getSigners();
-    let deiBoxFactory = await ethers.getContractFactory("DeiBox");
-    deiBox = await deiBoxFactory.deploy();
-    await deiBox.deployed();
-    let tokenFactory = await ethers.getContractFactory("TokenTest");
-    token = await tokenFactory.deploy();
-    await token.deployed();
+    token = await deployTokenTest();
+    deiBox = await deployDeiBox(token);
+
     let minterFactory = await ethers.getContractFactory("Minter");
     minter = await minterFactory.deploy(deiBox.address, token.address);
     await minter.deployed();
