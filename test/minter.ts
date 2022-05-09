@@ -15,7 +15,7 @@ describe("Minter", () => {
     let tokenFactory = await ethers.getContractFactory("TokenTest");
     token = await tokenFactory.deploy();
     await token.deployed();
-    deiBox = await deployDeiBox(token);
+    deiBox = await deployDeiBox(token.address);
     await deiBox.deployed();
   });
   it("Should deploy minter", async () => {

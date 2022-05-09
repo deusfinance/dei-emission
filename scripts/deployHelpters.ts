@@ -1,6 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ethers } from "hardhat";
-import { DeiBox, ERC20, Minter, TokenTest } from "../typechain";
+import { DeiBox, ERC20, Minter, TokenTest, Voter } from "../typechain";
 
 async function deployTokenTest(): Promise<TokenTest> {
   let tokenFactory = await ethers.getContractFactory("TokenTest");
@@ -9,25 +9,32 @@ async function deployTokenTest(): Promise<TokenTest> {
   return token;
 }
 
-async function deployDeiBox(token: ERC20): Promise<DeiBox> {
+async function deployDeiBox(tokenAddress: string): Promise<DeiBox> {
   let deiBoxFactory = await ethers.getContractFactory("DeiBox");
-  let deiBox = await deiBoxFactory.deploy(token.address);
+  let deiBox = await deiBoxFactory.deploy(tokenAddress);
   await deiBox.deployed();
   return deiBox;
 }
 
 async function deployMinter(
-  token: ERC20,
-  deiBox: DeiBox,
-  admin: SignerWithAddress
+  tokenAddress: string,
+  deiBoxAddress: string,
+  admin: string
 ): Promise<Minter> {
   let minterFactory = await ethers.getContractFactory("Minter");
-  let minter = await minterFactory.deploy(
-    deiBox.address,
-    token.address,
-    admin.address
-  );
+  let minter = await minterFactory.deploy(deiBoxAddress, tokenAddress, admin);
+  await minter.deployed();
   return minter;
 }
 
-export { deployTokenTest, deployDeiBox, deployMinter };
+async function deployVoter(
+  minterAddress: string,
+  veAddress: string
+): Promise<Voter> {
+  let voterFactory = await ethers.getContractFactory("Voter");
+  let voter = await voterFactory.deploy(minterAddress, veAddress);
+  await voter.deployed();
+  return voter;
+}
+
+export { deployTokenTest, deployDeiBox, deployMinter, deployVoter };

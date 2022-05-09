@@ -18,8 +18,8 @@ describe("Dei Box", async () => {
   before(async () => {
     [me, user1] = await ethers.getSigners();
     token = await deployTokenTest();
-    deiBox = await deployDeiBox(token);
-    minter = await deployMinter(token, deiBox, me);
+    deiBox = await deployDeiBox(token.address);
+    minter = await deployMinter(token.address, deiBox.address, me.address);
     await minter.setEmission(BigNumber.from("10000000000000000000"));
   });
   it("Should have balance 10 tokens after first mint", async () => {

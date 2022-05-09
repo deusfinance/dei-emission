@@ -2,7 +2,12 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
-import { deployDeiBox, deployTokenTest } from "../scripts/deployHelpters";
+import {
+  deployDeiBox,
+  deployMinter,
+  deployTokenTest,
+  deployVoter,
+} from "../scripts/deployHelpters";
 import { DeiBox, Minter, TokenTest, VeTest, Voter } from "../typechain";
 
 describe("Voter", () => {
@@ -15,23 +20,14 @@ describe("Voter", () => {
   before(async () => {
     [me] = await ethers.getSigners();
     token = await deployTokenTest();
-    deiBox = await deployDeiBox(token);
+    deiBox = await deployDeiBox(token.address);
+    minter = await deployMinter(token.address, deiBox.address, me.address);
 
-    let minterFactory = await ethers.getContractFactory("Minter");
-    minter = await minterFactory.deploy(
-      deiBox.address,
-      token.address,
-      me.address
-    );
-    await minter.deployed();
     let veFactory = await ethers.getContractFactory("VeTest");
     ve = await veFactory.deploy(token.address);
     await ve.deployed();
-  });
-  it("Should deploy voter", async () => {
-    let voterFactory = await ethers.getContractFactory("Voter");
-    voter = await voterFactory.deploy(minter.address, ve.address);
-    await voter.deployed();
+
+    voter = await deployVoter(minter.address, ve.address);
   });
   it("Should create lock", async () => {
     let tx = await ve.connect(me).create_lock(
