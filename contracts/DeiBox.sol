@@ -6,6 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract DeiBox {
     using SafeERC20 for IERC20;
 
+    event Sent(address reciever, uint256 amount);
+    event Took(address from, uint256 amount);
+
     IERC20 public token;
 
     constructor(address token_) {
@@ -14,5 +17,11 @@ contract DeiBox {
 
     function send(address recv, uint256 amount) external {
         token.safeTransfer(recv, amount);
+        emit Sent(recv, amount);
+    }
+
+    function take(address from, uint256 amount) external {
+        token.safeTransferFrom(from, address(this), amount);
+        emit Took(from, amount);
     }
 }
