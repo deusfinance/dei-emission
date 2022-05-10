@@ -1,4 +1,5 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { DeiBox, ERC20, Minter, TokenTest, Voter } from "../typechain";
 
@@ -29,10 +30,21 @@ async function deployMinter(
 
 async function deployVoter(
   minterAddress: string,
-  veAddress: string
+  veAddress: string,
+  minSubmitionPower: BigNumber,
+  minVotes: BigNumber,
+  minSupportVotes: BigNumber,
+  admin: string
 ): Promise<Voter> {
   let voterFactory = await ethers.getContractFactory("Voter");
-  let voter = await voterFactory.deploy(minterAddress, veAddress);
+  let voter = await voterFactory.deploy(
+    minterAddress,
+    veAddress,
+    minSubmitionPower,
+    minVotes,
+    minSupportVotes,
+    admin
+  );
   await voter.deployed();
   return voter;
 }
