@@ -15,7 +15,7 @@ describe("Minter", () => {
     let tokenFactory = await ethers.getContractFactory("TokenTest");
     token = await tokenFactory.deploy();
     await token.deployed();
-    deiBox = await deployDeiBox(token);
+    deiBox = await deployDeiBox(token.address);
     await deiBox.deployed();
   });
   it("Should deploy minter", async () => {
@@ -62,7 +62,7 @@ describe("Minter", () => {
   it("Shouldn't let mint 20 tokens after 5 days", async () => {
     let beforeBalance = await token.balanceOf(await minter.deiBox());
     await minter.mint();
-    await network.provider.send("evm_increaseTime", [86400 * 2]); // 2 days
+    await network.provider.send("evm_increaseTime", [3600]); // 1 hour
     await minter.mint();
     await network.provider.send("evm_increaseTime", [86400 * 7]); // 1 week
     let afterBalance = await token.balanceOf(await minter.deiBox());

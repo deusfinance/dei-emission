@@ -18,12 +18,12 @@
 
 ## Minter
 
-- [ ] Mints DEI and deposit into the DEI Box
+- [x] Mints DEI and deposit into the DEI Box
 
 ## DEI Box
 
-- [ ] Sends DEI
-- [ ] Takes DEI
+- [x] Sends DEI
+- [x] Takes DEI
 
 ## Voter
 

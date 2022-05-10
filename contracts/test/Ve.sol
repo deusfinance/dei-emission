@@ -21,15 +21,15 @@ contract VeTest {
         totalSupply += amount;
     }
 
-    function balanceOfNFT(uint256 tokenId) external view returns (uint256) {
-        return totalSupply;
+    function balanceOfNFT(uint256 tokenId_) external view returns (uint256) {
+        return balances[tokenId_];
     }
 
-    function isApprovedOrOwner(address owner, uint256 _tokenId)
+    function isApprovedOrOwner(address owner_, uint256 tokenId_)
         external
         view
         returns (bool)
     {
-        return true;
+        return owner_ == ownerOf[tokenId_];
     }
 }
