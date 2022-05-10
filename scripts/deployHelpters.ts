@@ -1,7 +1,7 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
-import { DeiBox, ERC20, Minter, TokenTest, Voter } from "../typechain";
+import { DeiBox, Minter, TokenTest, WhitelistVoting } from "../typechain";
+import { Voter } from "../typechain/Voter";
 
 async function deployTokenTest(): Promise<TokenTest> {
   let tokenFactory = await ethers.getContractFactory("TokenTest");
@@ -28,25 +28,49 @@ async function deployMinter(
   return minter;
 }
 
-async function deployVoter(
-  minterAddress: string,
+async function deployWhitelistVoting(
   veAddress: string,
-  minSubmitionPower: BigNumber,
+  minSubmissionPower: BigNumber,
   minVotes: BigNumber,
   minSupportVotes: BigNumber,
   admin: string
-): Promise<Voter> {
-  let voterFactory = await ethers.getContractFactory("Voter");
-  let voter = await voterFactory.deploy(
-    minterAddress,
+): Promise<WhitelistVoting> {
+  let whitelistVotingFactory = await ethers.getContractFactory(
+    "WhitelistVoting"
+  );
+  let whitelistVoting = await whitelistVotingFactory.deploy(
     veAddress,
-    minSubmitionPower,
+    minSubmissionPower,
     minVotes,
     minSupportVotes,
     admin
   );
-  await voter.deployed();
+  await whitelistVoting.deployed();
+  return whitelistVoting;
+}
+
+async function deployTestVe(tokenAddress: string) {
+  let veFactory = await ethers.getContractFactory("VeTest");
+  let _ve = await veFactory.deploy(tokenAddress);
+  _ve.deployed();
+  return _ve;
+}
+
+async function deployVoter(
+  veAddress: string,
+  whitelistVotingAddress: string
+): Promise<Voter> {
+  let voterFactory = await ethers.getContractFactory("Voter");
+  let voter = await voterFactory.deploy(veAddress, whitelistVotingAddress);
+  voter.deployed();
   return voter;
 }
 
-export { deployTokenTest, deployDeiBox, deployMinter, deployVoter };
+export {
+  deployTokenTest,
+  deployDeiBox,
+  deployMinter,
+  deployWhitelistVoting,
+  deployTestVe,
+  deployVoter,
+};
