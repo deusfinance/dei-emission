@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import {
   deployDeiBox,
   deployMinter,
@@ -64,7 +64,7 @@ describe("Voter", () => {
     await setupUserVotingPowers(); // lock veTOKENS
   });
   it("votes on lending #1 should be zero", async () => {
-    let totalVotes = await voter.getTotalVotesOfLending(poolId1);
+    let totalVotes = await (await voter.proposals(poolId1)).votes;
     expect(totalVotes).to.equal(0);
   });
   it("should fail to vote on lending #1 before it's submitted", async () => {
@@ -75,8 +75,8 @@ describe("Voter", () => {
   });
   it("should submit lending #1 for voting", async () => {
     await voter.submitLending(poolId1);
-    let isProposed = await voter.proposedLendings(poolId1);
-    expect(isProposed).to.be.true;
+    let status = await (await voter.proposals(poolId1)).status;
+    expect(status).to.equal(BigNumber.from(1)); // ACTIVE
   });
   it("should fail to submit same lending more than once", async () => {
     let submitTx = voter.submitLending(poolId1);
@@ -110,14 +110,18 @@ describe("Voter", () => {
   });
   it("should alow lending #2 to be submitted", async () => {
     await voter.connect(me).submitLending(poolId2);
-    let isProposed = await voter.proposedLendings(poolId2);
-    expect(isProposed).to.be.true;
+    let status = await (await voter.proposals(poolId2)).status;
+    expect(status).to.equal(BigNumber.from(1)); // ACTIVE
   });
   it("should decrease tokenId voting power after successful vote", async () => {
     let weight = BigNumber.from(10);
-    let beforeVotePower = await voter.connect(user2).getVotePower(veTokeId2);
+    let beforeVotePower = await voter
+      .connect(user2)
+      .getRemainingVotePower(veTokeId2);
     await voter.connect(user2).vote(poolId2, [veTokeId2], [weight]);
-    let afterVotePower = await voter.connect(user2).getVotePower(veTokeId2);
+    let afterVotePower = await voter
+      .connect(user2)
+      .getRemainingVotePower(veTokeId2);
     let diff = beforeVotePower.sub(afterVotePower);
     expect(diff.gte(weight)).to.be.true; // at least weight amount must be the diff
   });
@@ -126,4 +130,14 @@ describe("Voter", () => {
     let voteTx = voter.connect(user3).vote(poolId1, [veTokeId3], [weight]);
     await expect(voteTx).to.be.revertedWith("Voter: INSUFFICIENT_VOTING_POWER");
   });
+  it("Should reject lending#1 after 1 week", async () => {
+    await network.provider.send("evm_increaseTime", [86400 * 7]); // 1 week
+    await voter.execute(poolId1);
+    let status = await (await voter.proposals(poolId1)).status;
+    expect(status).to.equal(BigNumber.from(2)); // REJECTED
+  });
+  // todo: add setter functions
+  // todo: make it the AccessControl
+  // todo: test approved proposal
+  // todo: change the names to whitelister
 });

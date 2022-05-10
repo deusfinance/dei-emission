@@ -3,12 +3,28 @@ pragma solidity 0.8.13;
 
 import "./interfaces/Ive.sol";
 
-contract Voter {
-    address minter;
-    address ve;
+enum Status {
+    PENDING,
+    ACTIVE,
+    REJECTED,
+    APPROVED
+}
 
-    mapping(uint256 => bool) public proposedLendings; // its true if the lending id is proposed to be whitelisted
-    mapping(uint256 => int256) public lendingVotes; // lendingId => totalLendingVotes
+struct Proposal {
+    uint256 id;
+    uint256 timestamp;
+    int256 votes;
+    uint256 absVotes;
+    Status status;
+}
+
+contract Voter {
+    address public minter;
+    address public ve;
+    uint256 internal constant WEEK = 86400 * 7;
+    uint256 public minVotes = 5000e18;
+    int256 public minSupportVotes = 2500e18;
+    mapping(uint256 => Proposal) public proposals;
     mapping(uint256 => uint256) public powerUsed; // tokenId => amount of voting power used
 
     constructor(address minter_, address ve_) {
@@ -21,20 +37,25 @@ contract Voter {
         view
         returns (int256)
     {
-        return lendingVotes[lendingId];
+        return proposals[lendingId].votes;
     }
 
     function submitLending(uint256 lendingId) external {
         require(
-            proposedLendings[lendingId] == false,
+            proposals[lendingId].status == Status.PENDING,
             "Voter: ALREADY_SUBMITTED"
         );
         // todo: check min veDeus balance
         // todo: receive min fee amount
-        proposedLendings[lendingId] = true;
+        proposals[lendingId].status = Status.ACTIVE;
+        proposals[lendingId].timestamp = block.timestamp;
     }
 
-    function getVotePower(uint256 tokenId) public view returns (uint256) {
+    function getRemainingVotePower(uint256 tokenId)
+        public
+        view
+        returns (uint256)
+    {
         uint256 totalPower = Ive(ve).balanceOfNFT(tokenId);
         return totalPower - powerUsed[tokenId];
     }
@@ -44,17 +65,21 @@ contract Voter {
         uint256 tokenId,
         int256 weight
     ) internal {
-        require(proposedLendings[lendingId], "Voter: LENDING_NOT_SUBMITTED");
+        require(
+            proposals[lendingId].status == Status.ACTIVE,
+            "Voter: LENDING_NOT_SUBMITTED"
+        );
         require(
             Ive(ve).isApprovedOrOwner(msg.sender, tokenId),
             "Voter: TOKEN_ID_NOT_APPROVED"
         );
         require(
-            getVotePower(tokenId) >= abs(weight),
+            getRemainingVotePower(tokenId) >= abs(weight),
             "Voter: INSUFFICIENT_VOTING_POWER"
         );
         powerUsed[tokenId] += abs(weight);
-        lendingVotes[lendingId] += weight;
+        proposals[lendingId].votes += weight;
+        proposals[lendingId].absVotes += abs(weight);
     }
 
     function vote(
@@ -68,6 +93,25 @@ contract Voter {
         );
         for (uint256 i = 0; i < tokenIds.length; i++) {
             _vote(lendingId, tokenIds[i], weights[i]);
+        }
+    }
+
+    function execute(uint256 lendingId) external {
+        require(
+            proposals[lendingId].status == Status.ACTIVE,
+            "Voter: LENDING_NOT_APPROVED"
+        );
+        require(
+            block.timestamp > proposals[lendingId].timestamp + WEEK,
+            "Voter: PROPOSAL_STILL_PENDING"
+        );
+        if (
+            proposals[lendingId].absVotes > minVotes &&
+            proposals[lendingId].votes > minSupportVotes
+        ) {
+            proposals[lendingId].status = Status.APPROVED;
+        } else {
+            proposals[lendingId].status = Status.REJECTED;
         }
     }
 
