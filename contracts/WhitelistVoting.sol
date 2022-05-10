@@ -53,14 +53,17 @@ contract WhitelistVoting is AccessControl {
     function submitLending(uint256 lendingId, uint256 tokenId) external {
         require(
             proposals[lendingId].status == Status.PENDING,
-            "Voter: ALREADY_SUBMITTED"
+            "WhitelistVoting: ALREADY_SUBMITTED"
         );
         require(
             Ive(ve).isApprovedOrOwner(msg.sender, tokenId),
-            "Voter: TOKEN_ID_NOT_APPROVED"
+            "WhitelistVoting: TOKEN_ID_NOT_APPROVED"
         );
         uint256 power = Ive(ve).balanceOfNFT(tokenId);
-        require(power > minSubmissionPower, "Voter: INSUFFICIENT_POWER");
+        require(
+            power > minSubmissionPower,
+            "WhitelistVoting: INSUFFICIENT_POWER"
+        );
 
         proposals[lendingId].status = Status.ACTIVE;
         proposals[lendingId].timestamp = block.timestamp;
@@ -82,15 +85,15 @@ contract WhitelistVoting is AccessControl {
     ) internal {
         require(
             proposals[lendingId].status == Status.ACTIVE,
-            "Voter: LENDING_NOT_SUBMITTED"
+            "WhitelistVoting: LENDING_NOT_SUBMITTED"
         );
         require(
             Ive(ve).isApprovedOrOwner(msg.sender, tokenId),
-            "Voter: TOKEN_ID_NOT_APPROVED"
+            "WhitelistVoting: TOKEN_ID_NOT_APPROVED"
         );
         require(
             getRemainingVotePower(lendingId, tokenId) >= abs(weight),
-            "Voter: INSUFFICIENT_VOTING_POWER"
+            "WhitelistVoting: INSUFFICIENT_VOTING_POWER"
         );
         proposals[lendingId].powerUsed[tokenId] += abs(weight);
         proposals[lendingId].votes += weight;
@@ -104,7 +107,7 @@ contract WhitelistVoting is AccessControl {
     ) external {
         require(
             tokenIds.length == weights.length,
-            "Voter: TOKEN_ID_WEIGHT_MISMATCH"
+            "WhitelistVoting: TOKEN_ID_WEIGHT_MISMATCH"
         );
         for (uint256 i = 0; i < tokenIds.length; i++) {
             _vote(lendingId, tokenIds[i], weights[i]);
@@ -114,11 +117,11 @@ contract WhitelistVoting is AccessControl {
     function execute(uint256 lendingId) external {
         require(
             proposals[lendingId].status == Status.ACTIVE,
-            "Voter: LENDING_NOT_ACTIVE"
+            "WhitelistVoting: LENDING_NOT_ACTIVE"
         );
         require(
             block.timestamp > proposals[lendingId].timestamp + activeTime,
-            "Voter: PROPOSAL_STILL_ACTIVE"
+            "WhitelistVoting: PROPOSAL_STILL_ACTIVE"
         );
         if (
             proposals[lendingId].absVotes >= minVotes &&
@@ -155,7 +158,11 @@ contract WhitelistVoting is AccessControl {
         activeTime = activeTime_;
     }
 
-    function getLendingStatus(uint256 lendingId) public view returns (uint256) {
+    function getLendingStatus(uint256 lendingId)
+        external
+        view
+        returns (uint256)
+    {
         return uint256(proposals[lendingId].status);
     }
 }

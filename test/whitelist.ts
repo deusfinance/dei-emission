@@ -77,7 +77,9 @@ describe("Whitelist", () => {
     let voteTx = whitelistVoting
       .connect(me)
       .vote(poolId1, [veTokenId1], [BigNumber.from(100)]);
-    await expect(voteTx).to.be.revertedWith("Voter: LENDING_NOT_SUBMITTED");
+    await expect(voteTx).to.be.revertedWith(
+      "WhitelistVoting: LENDING_NOT_SUBMITTED"
+    );
   });
   it("should submit lending #1 for voting", async () => {
     await whitelistVoting.submitLending(poolId1, veTokenId1);
@@ -86,13 +88,17 @@ describe("Whitelist", () => {
   });
   it("should fail to submit same lending more than once", async () => {
     let submitTx = whitelistVoting.submitLending(poolId1, veTokenId1);
-    await expect(submitTx).to.be.revertedWith("Voter: ALREADY_SUBMITTED");
+    await expect(submitTx).to.be.revertedWith(
+      "WhitelistVoting: ALREADY_SUBMITTED"
+    );
   });
   it("should fail to vote with tokenId that the sender is not owner of has approve of", async () => {
     let voteTx = whitelistVoting
       .connect(user2)
       .vote(poolId1, [veTokenId1], [BigNumber.from(100)]);
-    await expect(voteTx).to.be.revertedWith("Voter: TOKEN_ID_NOT_APPROVED");
+    await expect(voteTx).to.be.revertedWith(
+      "WhitelistVoting: TOKEN_ID_NOT_APPROVED"
+    );
   });
   it("should vote 100 power on lending #1", async () => {
     let votingWeight = BigNumber.from(100);
@@ -114,7 +120,9 @@ describe("Whitelist", () => {
     let voteTx = whitelistVoting
       .connect(me)
       .vote(poolId2, [veTokenId1], [BigNumber.from(100)]);
-    await expect(voteTx).to.be.revertedWith("Voter: LENDING_NOT_SUBMITTED");
+    await expect(voteTx).to.be.revertedWith(
+      "WhitelistVoting: LENDING_NOT_SUBMITTED"
+    );
   });
   it("should alow lending #2 to be submitted", async () => {
     await whitelistVoting.connect(me).submitLending(poolId2, veTokenId1);
@@ -138,7 +146,9 @@ describe("Whitelist", () => {
     let voteTx = whitelistVoting
       .connect(user3)
       .vote(poolId1, [veTokenId3], [weight]);
-    await expect(voteTx).to.be.revertedWith("Voter: INSUFFICIENT_VOTING_POWER");
+    await expect(voteTx).to.be.revertedWith(
+      "WhitelistVoting: INSUFFICIENT_VOTING_POWER"
+    );
   });
   it("Should reject lending#1 after 1 week", async () => {
     await network.provider.send("evm_increaseTime", [86400 * 7]); // 1 week
@@ -177,6 +187,8 @@ describe("Whitelist", () => {
     let submitTx = whitelistVoting
       .connect(user4)
       .submitLending(poolId3, veTokenId4);
-    await expect(submitTx).to.be.revertedWith("Voter: INSUFFICIENT_POWER");
+    await expect(submitTx).to.be.revertedWith(
+      "WhitelistVoting: INSUFFICIENT_POWER"
+    );
   });
 });
