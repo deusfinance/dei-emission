@@ -7,29 +7,31 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract DeiBox is AccessControl {
     using SafeERC20 for IERC20;
 
+    bytes32 public constant LENDER_MANAGER = keccak256("LENDER_MANAGER");
+
     event Sent(address reciever, uint256 amount);
     event Took(address from, uint256 amount);
 
-    IERC20 public token;
+    address public token;
 
     constructor(address token_) {
-        token = IERC20(token_);
+        token = token_;
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     function send(address recv, uint256 amount)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(LENDER_MANAGER)
     {
-        token.safeTransfer(recv, amount);
+        IERC20(token).safeTransfer(recv, amount);
         emit Sent(recv, amount);
     }
 
     function take(address from, uint256 amount)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(LENDER_MANAGER)
     {
-        token.safeTransferFrom(from, address(this), amount);
+        IERC20(token).safeTransferFrom(from, address(this), amount);
         emit Took(from, amount);
     }
 }

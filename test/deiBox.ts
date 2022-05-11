@@ -20,6 +20,7 @@ describe("Dei Box", async () => {
     token = await deployTokenTest();
     deiBox = await deployDeiBox(token.address);
     minter = await deployMinter(token.address, deiBox.address, me.address);
+    await deiBox.grantRole(await deiBox.LENDER_MANAGER(), me.address);
     await minter.setEmission(BigNumber.from("10000000000000000000"));
   });
   it("Should have balance 10 tokens after first mint", async () => {
