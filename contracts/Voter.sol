@@ -8,6 +8,8 @@ contract Voter {
     address public ve;
     address public whitelistVoting;
 
+    mapping(uint256 => mapping(uint256 => uint256)) powerUsed; // period => (tokenId => powerUsed)
+
     uint256 internal constant WEEK = 86400 * 7; // allows minting once per week (reset every Thursday 00:00 UTC)
 
     constructor(address ve_, address whitelistVoting_) {
@@ -19,19 +21,56 @@ contract Voter {
         return (block.timestamp / WEEK) * WEEK;
     }
 
+    function getPowerUsedInActivePeriod(uint256 tokenId)
+        public
+        view
+        returns (uint256)
+    {
+        return _getPowerUsedAtPeriod(tokenId, getActivePeriod());
+    }
+
+    function getRemainingPowerInActivePeriod(uint256 tokenId)
+        public
+        view
+        returns (uint256)
+    {
+        return _getRemaingPowerAtPeriod(tokenId, getActivePeriod());
+    }
+
+    function _getRemaingPowerAtPeriod(uint256 tokenId, uint256 period)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256 totalPower = Ive(ve).balanceOfNFT(tokenId);
+        return totalPower - _getPowerUsedAtPeriod(tokenId, period);
+    }
+
+    function _getPowerUsedAtPeriod(uint256 tokenId, uint256 period)
+        internal
+        view
+        returns (uint256)
+    {
+        return powerUsed[period][tokenId];
+    }
+
     function _vote(
         uint256 tokenId,
-        uint256[] memory lendingIds,
-        int256[] memory weights
+        uint256 lendingId,
+        int256 weight,
+        uint256 period
     ) internal {
-        for (uint256 i = 0; i < lendingIds.length; i++) {
-            require(
-                IWhitelistVoting(whitelistVoting).getLendingStatus(
-                    lendingIds[i]
-                ) == Status.APPROVED,
-                "Voter: NOT_APPROVED"
-            );
-        }
+        require(
+            IWhitelistVoting(whitelistVoting).getLendingStatus(lendingId) ==
+                Status.APPROVED,
+            "Voter: NOT_APPROVED"
+        );
+        uint256 power = abs(weight);
+        require(
+            power <= _getRemaingPowerAtPeriod(tokenId, period),
+            "Voter: INSUFFICIENT_POWER"
+        );
+        powerUsed[period][tokenId] += power;
     }
 
     function vote(
@@ -47,6 +86,13 @@ contract Voter {
             lendingIds.length == weights.length,
             "Voter: LENDING_WEIGHT_MISMATCH"
         );
-        _vote(tokenId, lendingIds, weights);
+
+        for (uint256 i = 0; i < lendingIds.length; i++) {
+            _vote(tokenId, lendingIds[i], weights[i], getActivePeriod());
+        }
+    }
+
+    function abs(int256 x) private pure returns (uint256) {
+        return x >= 0 ? uint256(x) : uint256(-x);
     }
 }
