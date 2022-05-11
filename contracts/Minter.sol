@@ -34,10 +34,8 @@ contract Minter is AccessControl {
     }
 
     function mint() external returns (uint256) {
-        uint256 _period = activePeriod;
-        if (block.timestamp >= _period + WEEK) {
-            _period = (block.timestamp / WEEK) * WEEK;
-            activePeriod = _period;
+        if (block.timestamp >= activePeriod + WEEK) {
+            activePeriod = (block.timestamp / WEEK) * WEEK;
             uint256 _required = weeklyEmission();
             uint256 _balanceOf = IERC20(dei).balanceOf(address(this));
             uint256 _difference;
@@ -48,7 +46,7 @@ contract Minter is AccessControl {
             IERC20(dei).safeTransfer(deiBox, _required);
             emit Minted(deiBox, _required, _difference);
         }
-        return _period;
+        return activePeriod;
     }
 
     function setEmission(uint256 emission_)
