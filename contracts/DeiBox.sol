@@ -34,4 +34,11 @@ contract DeiBox is AccessControl {
         IERC20(token).safeTransferFrom(from, address(this), amount);
         emit Took(from, amount);
     }
+
+    function emergencyWithdraw(address to)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        IERC20(token).safeTransfer(to, IERC20(token).balanceOf(address(this)));
+    }
 }
