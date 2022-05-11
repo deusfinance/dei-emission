@@ -8,9 +8,15 @@ contract Voter {
     address public ve;
     address public whitelistVoting;
 
+    uint256 internal constant WEEK = 86400 * 7; // allows minting once per week (reset every Thursday 00:00 UTC)
+
     constructor(address ve_, address whitelistVoting_) {
         ve = ve_;
         whitelistVoting = whitelistVoting_;
+    }
+
+    function getActivePeriod() public view returns (uint256) {
+        return (block.timestamp / WEEK) * WEEK;
     }
 
     function _vote(
