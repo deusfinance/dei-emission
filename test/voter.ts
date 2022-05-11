@@ -148,5 +148,10 @@ describe("Voter", async () => {
     let vote = voter.connect(user1).vote(veTokenId2, [poolId1], [weight]);
     await expect(vote).to.be.revertedWith("Voter: INSUFFICIENT_POWER");
   });
-  it("should able to vote if lending is approved");
+  it("should able to vote if lending is approved", async () => {
+    let weight = BigNumber.from(100);
+    await voter.connect(user1).vote(veTokenId2, [poolId1], [weight]);
+    let lendingVotes = await voter.getLendingVotesInActivePeriod(poolId1);
+    expect(lendingVotes).to.eq(weight);
+  });
 });

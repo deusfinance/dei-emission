@@ -9,12 +9,20 @@ contract Voter {
     address public whitelistVoting;
 
     mapping(uint256 => mapping(uint256 => uint256)) powerUsed; // period => (tokenId => powerUsed)
-
+    mapping(uint256 => mapping(uint256 => int256)) lendingVotes; // period => (lendingId => votes)
     uint256 internal constant WEEK = 86400 * 7; // allows minting once per week (reset every Thursday 00:00 UTC)
 
     constructor(address ve_, address whitelistVoting_) {
         ve = ve_;
         whitelistVoting = whitelistVoting_;
+    }
+
+    function getLendingVotesInActivePeriod(uint256 lendingId)
+        public
+        view
+        returns (int256)
+    {
+        return _getLendingVotesAtPeriod(lendingId, getActivePeriod());
     }
 
     function getActivePeriod() public view returns (uint256) {
@@ -54,6 +62,14 @@ contract Voter {
         return powerUsed[period][tokenId];
     }
 
+    function _getLendingVotesAtPeriod(uint256 lendingId, uint256 period)
+        internal
+        view
+        returns (int256)
+    {
+        return lendingVotes[period][lendingId];
+    }
+
     function _vote(
         uint256 tokenId,
         uint256 lendingId,
@@ -71,6 +87,7 @@ contract Voter {
             "Voter: INSUFFICIENT_POWER"
         );
         powerUsed[period][tokenId] += power;
+        lendingVotes[period][lendingId] += weight;
     }
 
     function vote(
