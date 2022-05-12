@@ -12,6 +12,7 @@ contract Voter {
 
     mapping(uint256 => mapping(uint256 => uint256)) public powerUsed; // period => (tokenId => powerUsed)
     mapping(uint256 => mapping(uint256 => int256)) public lendingVotes; // period => (lendingId => votes)
+    mapping(uint256 => uint256) public totalPowers; // period => total powers voted
     uint256 internal constant WEEK = 86400 * 7; // allows minting once per week (reset every Thursday 00:00 UTC)
 
     /* ========== CONSTRUCTOR ========== */
@@ -45,6 +46,10 @@ contract Voter {
         for (uint256 i = 0; i < lendingIds.length; i++) {
             _vote(tokenId, lendingIds[i], weights[i], getActivePeriod());
         }
+    }
+
+    function getTotalPowerInActivePeriod() public view returns (uint256) {
+        return totalPowers[getActivePeriod()];
     }
 
     function getLendingVotesInActivePeriod(uint256 lendingId)
@@ -103,6 +108,7 @@ contract Voter {
             "Voter: INSUFFICIENT_POWER"
         );
         powerUsed[period][tokenId] += power;
+        totalPowers[period] += power;
         lendingVotes[period][lendingId] += weight;
     }
 

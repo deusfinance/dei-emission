@@ -166,11 +166,14 @@ describe("Voter", async () => {
     it("should update total votes correctly", async () => {
       let u1w1 = BigNumber.from(1000);
       let u1w2 = BigNumber.from(-2000);
+      let beforeTotalPower = await voter.getTotalPowerInActivePeriod();
       await voter
         .connect(me)
         .vote(veTokenId1, [poolId1, poolId3], [u1w1, u1w2]);
+
+      let totalWeights = await voter.getTotalPowerInActivePeriod();
+      expect(totalWeights.sub(beforeTotalPower)).to.eq(u1w1.sub(u1w2));
     });
-    // let totalWeights = await voter.totalActiveWeights();
   });
 
   describe("Test cap manager", async () => {
