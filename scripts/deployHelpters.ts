@@ -58,10 +58,15 @@ async function deployTestVe(tokenAddress: string) {
 
 async function deployVoter(
   veAddress: string,
-  whitelistVotingAddress: string
+  whitelistVotingAddress: string,
+  minterAddress: string
 ): Promise<Voter> {
   let voterFactory = await ethers.getContractFactory("Voter");
-  let voter = await voterFactory.deploy(veAddress, whitelistVotingAddress);
+  let voter = await voterFactory.deploy(
+    veAddress,
+    whitelistVotingAddress,
+    minterAddress
+  );
   voter.deployed();
   return voter;
 }

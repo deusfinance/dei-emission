@@ -2,12 +2,21 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
 import { ethers, network } from "hardhat";
 import {
+  deployDeiBox,
+  deployMinter,
   deployTestVe,
   deployTokenTest,
   deployVoter,
   deployWhitelistVoting,
 } from "../scripts/deployHelpters";
-import { TokenTest, VeTest, Voter, WhitelistVoting } from "../typechain";
+import {
+  DeiBox,
+  Minter,
+  TokenTest,
+  VeTest,
+  Voter,
+  WhitelistVoting,
+} from "../typechain";
 import { expect } from "chai";
 import {
   getCurrentTimeStamp,
@@ -23,6 +32,8 @@ describe("Voter", async () => {
   let token: TokenTest;
   let voter: Voter;
   let whitelistVoting: WhitelistVoting;
+  let minter: Minter;
+  let deiBox: DeiBox;
 
   let minSubmissionPower = BigNumber.from(1);
   let minVotes = BigNumber.from(1);
@@ -62,6 +73,8 @@ describe("Voter", async () => {
     [me, user1, user2] = await ethers.getSigners();
     token = await deployTokenTest();
     ve = await deployTestVe(token.address);
+    deiBox = await deployDeiBox(token.address);
+    minter = await deployMinter(token.address, deiBox.address, me.address);
     whitelistVoting = await deployWhitelistVoting(
       ve.address,
       minSubmissionPower,
@@ -71,7 +84,11 @@ describe("Voter", async () => {
     );
     await setupUserVotingPowers(); // lock veTOKENS
     await setupWhitelist(); // approve lending #1, reject lending #2
-    voter = await deployVoter(ve.address, whitelistVoting.address);
+    voter = await deployVoter(
+      ve.address,
+      whitelistVoting.address,
+      minter.address
+    );
   });
   it("should fail to vote if lending is not approved", async () => {
     let voteTx = voter.vote(veTokenId1, [poolId2], ["200"]);

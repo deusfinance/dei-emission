@@ -7,14 +7,20 @@ import "./interfaces/Ive.sol";
 contract Voter {
     address public ve;
     address public whitelistVoting;
+    address public minter;
 
     mapping(uint256 => mapping(uint256 => uint256)) powerUsed; // period => (tokenId => powerUsed)
     mapping(uint256 => mapping(uint256 => int256)) lendingVotes; // period => (lendingId => votes)
     uint256 internal constant WEEK = 86400 * 7; // allows minting once per week (reset every Thursday 00:00 UTC)
 
-    constructor(address ve_, address whitelistVoting_) {
+    constructor(
+        address ve_,
+        address whitelistVoting_,
+        address minter_
+    ) {
         ve = ve_;
         whitelistVoting = whitelistVoting_;
+        minter = minter_;
     }
 
     function getLendingVotesInActivePeriod(uint256 lendingId)
