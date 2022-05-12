@@ -10,8 +10,8 @@ contract Voter {
     address public whitelistVoting;
     address public minter;
 
-    mapping(uint256 => mapping(uint256 => uint256)) powerUsed; // period => (tokenId => powerUsed)
-    mapping(uint256 => mapping(uint256 => int256)) lendingVotes; // period => (lendingId => votes)
+    mapping(uint256 => mapping(uint256 => uint256)) public powerUsed; // period => (tokenId => powerUsed)
+    mapping(uint256 => mapping(uint256 => int256)) public lendingVotes; // period => (lendingId => votes)
     uint256 internal constant WEEK = 86400 * 7; // allows minting once per week (reset every Thursday 00:00 UTC)
 
     /* ========== CONSTRUCTOR ========== */
