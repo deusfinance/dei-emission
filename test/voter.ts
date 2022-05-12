@@ -67,7 +67,8 @@ describe("Voter", async () => {
       .withArgs(poolId3)
       .returns(3); // approve poolId3
   }
-  before(async () => {
+
+  async function setupFreshEnvironment() {
     [me, user1, user2] = await ethers.getSigners();
 
     token = await deployTokenTest();
@@ -87,75 +88,78 @@ describe("Voter", async () => {
       mockWhitelistVoting.address,
       mockMinter.address
     );
-  });
-  it("should fail to vote if lending is not approved", async () => {
-    let voteTx = voter.vote(veTokenId1, [poolId2], ["200"]);
-    await expect(voteTx).to.be.revertedWith("Voter: NOT_APPROVED");
-  });
-  it("should return correct active period in the beginning of the week", async () => {
-    await setTimeToNextThursdayMidnight();
-    let now = await getCurrentTimeStamp();
-    let activePeriod = await voter.getActivePeriod();
-    expect(activePeriod).to.equal(now);
-  });
-  it("should return same active period after five days", async () => {
-    let beforePeriod = await voter.getActivePeriod();
-    await increaseTime(day * 5);
-    let afterPeriod = await voter.getActivePeriod();
-    expect(beforePeriod).to.equal(afterPeriod);
-  });
-  it("should return next active period after 1 week", async () => {
-    await setTimeToNextThursdayMidnight();
-    let beforePeriod = await voter.getActivePeriod();
-    await increaseTime(week);
-    let afterPeriod = await voter.getActivePeriod();
-    expect(afterPeriod.sub(beforePeriod)).to.equal(week);
-  });
-  it("should return 0 power used in active period if tokenId not yet vote", async () => {
-    let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId1);
-    expect(powerUsed).to.eq(0);
-  });
-  it("should return used power after vote", async () => {
-    let weight = BigNumber.from(10);
-    await voter.vote(veTokenId1, [poolId1], [weight]);
-    let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId1);
-    expect(weight).to.eq(powerUsed);
-  });
-  it("should return correct remaining power in active period", async () => {
-    let powerUsed = BigNumber.from(10);
-    let trueRemainingPower = veTokenId1TotalPower.sub(powerUsed);
-    let remainingPower = await voter.getRemainingPowerInActivePeriod(
-      veTokenId1
-    );
-    expect(remainingPower).to.eq(trueRemainingPower);
-  });
-  it("should return correct power used for negative weights", async () => {
-    let weight = BigNumber.from(-10);
-    await voter.vote(veTokenId1, [poolId1], [weight]);
-    let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId1);
-    expect(BigNumber.from(20)).to.eq(powerUsed); // 10 power used in previous power test + 10 power in this test = 20 power total
-  });
-  it("vote of one tokenId should not effect powers of other tokens", async () => {
-    let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId2);
-    expect(powerUsed).to.eq(0);
-  });
-  it("vote this period should not effect next week votes", async () => {
-    await setTimeToNextThursdayMidnight();
-    let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId1);
-    expect(powerUsed).to.eq(0);
-  });
-  it("should fail to vote with weights exceeding max vote power of user in active period", async () => {
-    let weight = vetTokenId2TotalPower.add(1);
-    let vote = voter.connect(user1).vote(veTokenId2, [poolId1], [weight]);
-    await expect(vote).to.be.revertedWith("Voter: INSUFFICIENT_POWER");
-  });
-  it("should able to vote if lending is approved", async () => {
-    let weight = BigNumber.from(100);
-    await voter.connect(user1).vote(veTokenId2, [poolId1], [weight]);
-    let lendingVotes = await voter.getLendingVotesInActivePeriod(poolId1);
-    expect(lendingVotes).to.eq(weight);
-  });
-  it("should update total votes", async () => {
-    await setTimeToNextThursdayMidnight();
+  }
+
+  describe("Test Voting Mechanism", async () => {
+    before(async () => {
+      await setupFreshEnvironment();
+    });
+    it("should fail to vote if lending is not approved", async () => {
+      let voteTx = voter.vote(veTokenId1, [poolId2], ["200"]);
+      await expect(voteTx).to.be.revertedWith("Voter: NOT_APPROVED");
+    });
+    it("should return correct active period in the beginning of the week", async () => {
+      await setTimeToNextThursdayMidnight();
+      let now = await getCurrentTimeStamp();
+      let activePeriod = await voter.getActivePeriod();
+      expect(activePeriod).to.equal(now);
+    });
+    it("should return same active period after five days", async () => {
+      let beforePeriod = await voter.getActivePeriod();
+      await increaseTime(day * 5);
+      let afterPeriod = await voter.getActivePeriod();
+      expect(beforePeriod).to.equal(afterPeriod);
+    });
+    it("should return next active period after 1 week", async () => {
+      await setTimeToNextThursdayMidnight();
+      let beforePeriod = await voter.getActivePeriod();
+      await increaseTime(week);
+      let afterPeriod = await voter.getActivePeriod();
+      expect(afterPeriod.sub(beforePeriod)).to.equal(week);
+    });
+    it("should return 0 power used in active period if tokenId not yet voted", async () => {
+      let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId1);
+      expect(powerUsed).to.eq(0);
+    });
+    it("should return used power after vote", async () => {
+      let weight = BigNumber.from(10);
+      await voter.vote(veTokenId1, [poolId1], [weight]);
+      let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId1);
+      expect(weight).to.eq(powerUsed);
+    });
+    it("should return correct remaining power in active period", async () => {
+      let powerUsed = BigNumber.from(10);
+      let trueRemainingPower = veTokenId1TotalPower.sub(powerUsed);
+      let remainingPower = await voter.getRemainingPowerInActivePeriod(
+        veTokenId1
+      );
+      expect(remainingPower).to.eq(trueRemainingPower);
+    });
+    it("should return correct power used for negative weights", async () => {
+      let weight = BigNumber.from(-10);
+      await voter.vote(veTokenId1, [poolId1], [weight]);
+      let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId1);
+      expect(BigNumber.from(20)).to.eq(powerUsed); // 10 power used in previous power test + 10 power in this test = 20 power total
+    });
+    it("vote of one tokenId should not effect powers of other tokens", async () => {
+      let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId2);
+      expect(powerUsed).to.eq(0);
+    });
+    it("vote this period should not effect next week votes", async () => {
+      await setTimeToNextThursdayMidnight();
+      let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId1);
+      expect(powerUsed).to.eq(0);
+    });
+    it("should fail to vote with weights exceeding max vote power of user in active period", async () => {
+      let weight = vetTokenId2TotalPower.add(1);
+      let vote = voter.connect(user1).vote(veTokenId2, [poolId1], [weight]);
+      await expect(vote).to.be.revertedWith("Voter: INSUFFICIENT_POWER");
+    });
+    it("should able to vote if lending is approved", async () => {
+      let weight = BigNumber.from(100);
+      await voter.connect(user1).vote(veTokenId2, [poolId1], [weight]);
+      let lendingVotes = await voter.getLendingVotesInActivePeriod(poolId1);
+      expect(lendingVotes).to.eq(weight);
+    });
   });
 });
