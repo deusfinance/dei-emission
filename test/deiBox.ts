@@ -8,6 +8,7 @@ import {
   deployMinter,
 } from "../scripts/deployHelpters";
 import { DeiBox, Minter, TokenTest } from "../typechain";
+import { setTimeToNextThursdayMidnight } from "./timeUtils";
 
 describe("Dei Box", async () => {
   let deiBox: DeiBox;

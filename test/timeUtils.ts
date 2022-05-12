@@ -8,6 +8,10 @@ async function getCurrentTimeStamp(): Promise<number> {
   return blockBefore.timestamp;
 }
 
+async function getActivePeriod(): Promise<number> {
+  return Math.floor((await getCurrentTimeStamp()) / week) * week;
+}
+
 async function setTimeToNextThursdayMidnight() {
   let currentTimeStamp = await getCurrentTimeStamp();
   let remainingToNextWeek = week - (currentTimeStamp % week);
@@ -21,4 +25,9 @@ async function increaseTime(increaseAmount: number) {
   await network.provider.send("evm_mine", [before + increaseAmount]);
 }
 
-export { getCurrentTimeStamp, setTimeToNextThursdayMidnight, increaseTime };
+export {
+  getCurrentTimeStamp,
+  setTimeToNextThursdayMidnight,
+  increaseTime,
+  getActivePeriod,
+};

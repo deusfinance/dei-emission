@@ -4,7 +4,11 @@ import { BigNumber } from "ethers";
 import { ethers, network } from "hardhat";
 import { deployDeiBox } from "../scripts/deployHelpters";
 import { DeiBox, Minter, TokenTest } from "../typechain";
-import { increaseTime } from "./timeUtils";
+import {
+  getActivePeriod,
+  increaseTime,
+  setTimeToNextThursdayMidnight,
+} from "./timeUtils";
 
 describe("Minter", () => {
   let minter: Minter;
@@ -81,5 +85,27 @@ describe("Minter", () => {
     expect(afterBalance.sub(beforeBalance)).to.eq(
       BigNumber.from("20000000000000000000")
     );
+  });
+  it("should track mint amounts", async () => {
+    let p1MintAmount = BigNumber.from(10000);
+    let p2MintAmount = BigNumber.from(20000);
+
+    // mint p1MintAmount in period p1
+    await setTimeToNextThursdayMidnight();
+    await minter.setEmission(p1MintAmount);
+    let p1 = await getActivePeriod();
+    await minter.mint();
+
+    // mint p2MintAmount in period p2
+    await setTimeToNextThursdayMidnight();
+    await minter.setEmission(p2MintAmount);
+    let p2 = await getActivePeriod();
+    await minter.mint();
+
+    let p1Amount = await minter.mintAmount(p1);
+    let p2Amount = await minter.mintAmount(p2);
+
+    expect(p1Amount).to.eq(p1MintAmount);
+    expect(p2Amount).to.eq(p2MintAmount);
   });
 });
