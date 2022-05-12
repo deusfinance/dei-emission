@@ -33,6 +33,10 @@ contract Minter is AccessControl {
         return emission;
     }
 
+    function getActivePeriod() public view returns (uint256) {
+        return (block.timestamp / WEEK) * WEEK;
+    }
+
     function mint() external returns (uint256) {
         if (block.timestamp >= activePeriod + WEEK) {
             activePeriod = (block.timestamp / WEEK) * WEEK;

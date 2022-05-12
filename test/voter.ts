@@ -9,6 +9,11 @@ import {
 } from "../scripts/deployHelpters";
 import { TokenTest, VeTest, Voter, WhitelistVoting } from "../typechain";
 import { expect } from "chai";
+import {
+  getCurrentTimeStamp,
+  increaseTime,
+  setTimeToNextThursdayMidnight,
+} from "./timeUtils";
 
 describe("Voter", async () => {
   let me: SignerWithAddress;
@@ -33,25 +38,6 @@ describe("Voter", async () => {
   let veTokenId2 = BigNumber.from(2);
   let veTokenId1TotalPower = BigNumber.from("1000000000000000000000");
   let vetTokenId2TotalPower = BigNumber.from("500000000000000000000");
-
-  async function getCurrentTimeStamp(): Promise<number> {
-    const blockNumBefore = await ethers.provider.getBlockNumber();
-    const blockBefore = await ethers.provider.getBlock(blockNumBefore);
-    return blockBefore.timestamp;
-  }
-
-  async function setTimeToNextThursdayMidnight() {
-    let currentTimeStamp = await getCurrentTimeStamp();
-    let remainingToNextWeek = week - (currentTimeStamp % week);
-    await network.provider.send("evm_mine", [
-      currentTimeStamp + remainingToNextWeek,
-    ]); // Thursday 00:00 UTC
-  }
-
-  async function increaseTime(increaseAmount: number) {
-    let before = await getCurrentTimeStamp();
-    await network.provider.send("evm_mine", [before + increaseAmount]);
-  }
 
   async function setupUserVotingPowers() {
     await ve.connect(me).create_lock(
@@ -154,4 +140,5 @@ describe("Voter", async () => {
     let lendingVotes = await voter.getLendingVotesInActivePeriod(poolId1);
     expect(lendingVotes).to.eq(weight);
   });
+  it("");
 });
