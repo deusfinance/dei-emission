@@ -42,8 +42,8 @@ describe("Voter", async () => {
 
   let veTokenId1 = BigNumber.from(1);
   let veTokenId2 = BigNumber.from(2);
-  let veTokenId1TotalPower = BigNumber.from("1000000000000000000000");
-  let vetTokenId2TotalPower = BigNumber.from("500000000000000000000");
+  let veTokenId1TotalPower = BigNumber.from("1000000000000000000000"); // 1000 tokens
+  let vetTokenId2TotalPower = BigNumber.from("500000000000000000000"); // 500 tokens
 
   async function setupUserVotingPowers() {
     await ve.connect(me).create_lock(
@@ -88,6 +88,8 @@ describe("Voter", async () => {
       mockWhitelistVoting.address,
       mockMinter.address
     );
+
+    await setTimeToNextThursdayMidnight();
   }
 
   describe("Test Voting Mechanism", async () => {
@@ -161,5 +163,20 @@ describe("Voter", async () => {
       let lendingVotes = await voter.getLendingVotesInActivePeriod(poolId1);
       expect(lendingVotes).to.eq(weight);
     });
+    it("should update total votes correctly", async () => {
+      let u1w1 = BigNumber.from(1000);
+      let u1w2 = BigNumber.from(-2000);
+      await voter
+        .connect(me)
+        .vote(veTokenId1, [poolId1, poolId3], [u1w1, u1w2]);
+    });
+    // let totalWeights = await voter.totalActiveWeights();
+  });
+
+  describe("Test cap manager", async () => {
+    before(async () => {
+      await setupFreshEnvironment();
+    });
+    it("should update total votes correctly");
   });
 });

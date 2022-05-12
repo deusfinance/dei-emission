@@ -28,7 +28,7 @@ contract Voter {
         view
         returns (int256)
     {
-        return _getLendingVotesAtPeriod(lendingId, getActivePeriod());
+        return lendingVotes[getActivePeriod()][lendingId];
     }
 
     function getActivePeriod() public view returns (uint256) {
@@ -40,7 +40,7 @@ contract Voter {
         view
         returns (uint256)
     {
-        return _getPowerUsedAtPeriod(tokenId, getActivePeriod());
+        return powerUsed[getActivePeriod()][tokenId];
     }
 
     function getRemainingPowerInActivePeriod(uint256 tokenId)
@@ -57,23 +57,7 @@ contract Voter {
         returns (uint256)
     {
         uint256 totalPower = Ive(ve).balanceOfNFT(tokenId);
-        return totalPower - _getPowerUsedAtPeriod(tokenId, period);
-    }
-
-    function _getPowerUsedAtPeriod(uint256 tokenId, uint256 period)
-        internal
-        view
-        returns (uint256)
-    {
-        return powerUsed[period][tokenId];
-    }
-
-    function _getLendingVotesAtPeriod(uint256 lendingId, uint256 period)
-        internal
-        view
-        returns (int256)
-    {
-        return lendingVotes[period][lendingId];
+        return totalPower - powerUsed[period][tokenId];
     }
 
     function _vote(
