@@ -5,6 +5,7 @@ import "./interfaces/IWhitelistVoting.sol";
 import "./interfaces/Ive.sol";
 
 contract Voter {
+    /* ========== STATE VARIABLES ========== */
     address public ve;
     address public whitelistVoting;
     address public minter;
@@ -12,6 +13,8 @@ contract Voter {
     mapping(uint256 => mapping(uint256 => uint256)) powerUsed; // period => (tokenId => powerUsed)
     mapping(uint256 => mapping(uint256 => int256)) lendingVotes; // period => (lendingId => votes)
     uint256 internal constant WEEK = 86400 * 7; // allows minting once per week (reset every Thursday 00:00 UTC)
+
+    /* ========== CONSTRUCTOR ========== */
 
     constructor(
         address ve_,
@@ -21,6 +24,27 @@ contract Voter {
         ve = ve_;
         whitelistVoting = whitelistVoting_;
         minter = minter_;
+    }
+
+    /* ========== PUBLIC VIEWS ========== */
+
+    function vote(
+        uint256 tokenId,
+        uint256[] memory lendingIds,
+        int256[] memory weights
+    ) external {
+        require(
+            Ive(ve).isApprovedOrOwner(msg.sender, tokenId),
+            "Voter: TOKEN_ID_NOT_APPROVED"
+        );
+        require(
+            lendingIds.length == weights.length,
+            "Voter: LENDING_WEIGHT_MISMATCH"
+        );
+
+        for (uint256 i = 0; i < lendingIds.length; i++) {
+            _vote(tokenId, lendingIds[i], weights[i], getActivePeriod());
+        }
     }
 
     function getLendingVotesInActivePeriod(uint256 lendingId)
@@ -51,6 +75,8 @@ contract Voter {
         return _getRemaingPowerAtPeriod(tokenId, getActivePeriod());
     }
 
+    /* ========== INTERNAL VIEWS ========== */
+
     function _getRemaingPowerAtPeriod(uint256 tokenId, uint256 period)
         internal
         view
@@ -78,25 +104,6 @@ contract Voter {
         );
         powerUsed[period][tokenId] += power;
         lendingVotes[period][lendingId] += weight;
-    }
-
-    function vote(
-        uint256 tokenId,
-        uint256[] memory lendingIds,
-        int256[] memory weights
-    ) external {
-        require(
-            Ive(ve).isApprovedOrOwner(msg.sender, tokenId),
-            "Voter: TOKEN_ID_NOT_APPROVED"
-        );
-        require(
-            lendingIds.length == weights.length,
-            "Voter: LENDING_WEIGHT_MISMATCH"
-        );
-
-        for (uint256 i = 0; i < lendingIds.length; i++) {
-            _vote(tokenId, lendingIds[i], weights[i], getActivePeriod());
-        }
     }
 
     function abs(int256 x) private pure returns (uint256) {
