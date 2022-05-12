@@ -2,20 +2,17 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
 import { ethers, network } from "hardhat";
 import {
-  deployDeiBox,
-  deployMinter,
   deployTestVe,
   deployTokenTest,
   deployVoter,
-  deployWhitelistVoting,
 } from "../scripts/deployHelpters";
 import {
   DeiBox,
-  Minter,
+  Minter__factory,
   TokenTest,
   VeTest,
   Voter,
-  WhitelistVoting,
+  WhitelistVoting__factory,
 } from "../typechain";
 import { expect } from "chai";
 import {
@@ -23,6 +20,7 @@ import {
   increaseTime,
   setTimeToNextThursdayMidnight,
 } from "./timeUtils";
+import { deployMockContract, MockContract } from "ethereum-waffle";
 
 describe("Voter", async () => {
   let me: SignerWithAddress;
@@ -31,16 +29,13 @@ describe("Voter", async () => {
   let ve: VeTest;
   let token: TokenTest;
   let voter: Voter;
-  let whitelistVoting: WhitelistVoting;
-  let minter: Minter;
-  let deiBox: DeiBox;
 
-  let minSubmissionPower = BigNumber.from(1);
-  let minVotes = BigNumber.from(1);
-  let minSupportVotes = BigNumber.from(1);
+  let mockMinter: MockContract;
+  let mockWhitelistVoting: MockContract;
 
   let poolId1 = BigNumber.from(1);
   let poolId2 = BigNumber.from(2);
+  let poolId3 = BigNumber.from(3);
 
   let day = 86400;
   let week = day * 7;
@@ -62,32 +57,35 @@ describe("Voter", async () => {
     );
   }
   async function setupWhitelist() {
-    await whitelistVoting.submitLending(poolId1, veTokenId1);
-    await whitelistVoting.connect(user1).submitLending(poolId2, veTokenId2);
-    await whitelistVoting.vote(poolId1, [veTokenId1], ["2"]);
-    await network.provider.send("evm_increaseTime", [86400 * 7]); // 1 week
-    await whitelistVoting.execute(poolId1); // pool 1 will be approved
-    await whitelistVoting.execute(poolId2); // pool 2 will be rejected
+    await mockWhitelistVoting.mock.getLendingStatus
+      .withArgs(poolId1)
+      .returns(3); // approve poolId1
+    await mockWhitelistVoting.mock.getLendingStatus
+      .withArgs(poolId2)
+      .returns(2); // reject poolId2
+    await mockWhitelistVoting.mock.getLendingStatus
+      .withArgs(poolId3)
+      .returns(3); // approve poolId3
   }
   before(async () => {
     [me, user1, user2] = await ethers.getSigners();
+
     token = await deployTokenTest();
     ve = await deployTestVe(token.address);
-    deiBox = await deployDeiBox(token.address);
-    minter = await deployMinter(token.address, deiBox.address, me.address);
-    whitelistVoting = await deployWhitelistVoting(
-      ve.address,
-      minSubmissionPower,
-      minVotes,
-      minSupportVotes,
-      me.address
+
+    mockMinter = await deployMockContract(me, Minter__factory.abi);
+    mockWhitelistVoting = await deployMockContract(
+      me,
+      WhitelistVoting__factory.abi
     );
+
     await setupUserVotingPowers(); // lock veTOKENS
-    await setupWhitelist(); // approve lending #1, reject lending #2
+    await setupWhitelist(); // approve pool1, reject pool2
+
     voter = await deployVoter(
       ve.address,
-      whitelistVoting.address,
-      minter.address
+      mockWhitelistVoting.address,
+      mockMinter.address
     );
   });
   it("should fail to vote if lending is not approved", async () => {
@@ -157,5 +155,7 @@ describe("Voter", async () => {
     let lendingVotes = await voter.getLendingVotesInActivePeriod(poolId1);
     expect(lendingVotes).to.eq(weight);
   });
-  it("");
+  it("should update total votes", async () => {
+    await setTimeToNextThursdayMidnight();
+  });
 });
