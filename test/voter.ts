@@ -180,6 +180,9 @@ describe("Voter", async () => {
     before(async () => {
       await setupFreshEnvironment();
     });
-    it("should update total votes correctly");
+    it("Should update total votes correctly", async () => {
+      let weight = BigNumber.from(1000);
+      await voter.connect(me).vote(veTokenId1, [poolId1], [weight]);
+    });
   });
 });

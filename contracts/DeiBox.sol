@@ -9,8 +9,8 @@ contract DeiBox is AccessControl {
 
     bytes32 public constant LENDER_MANAGER = keccak256("LENDER_MANAGER");
 
-    event Sent(address reciever, uint256 amount);
-    event Took(address from, uint256 amount);
+    event Sent(address lender, address reciever, uint256 amount);
+    event Took(address lender, address from, uint256 amount);
 
     address public token;
 
@@ -24,7 +24,7 @@ contract DeiBox is AccessControl {
         onlyRole(LENDER_MANAGER)
     {
         IERC20(token).safeTransfer(recv, amount);
-        emit Sent(recv, amount);
+        emit Sent(msg.sender, recv, amount);
     }
 
     function take(address from, uint256 amount)
@@ -32,7 +32,7 @@ contract DeiBox is AccessControl {
         onlyRole(LENDER_MANAGER)
     {
         IERC20(token).safeTransferFrom(from, address(this), amount);
-        emit Took(from, amount);
+        emit Took(msg.sender, from, amount);
     }
 
     function emergencyWithdrawETH(address to, uint256 amount)

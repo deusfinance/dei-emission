@@ -80,8 +80,6 @@ contract Voter {
         return _getRemaingPowerAtPeriod(tokenId, getActivePeriod());
     }
 
-    /* ========== INTERNAL VIEWS ========== */
-
     function _getRemaingPowerAtPeriod(uint256 tokenId, uint256 period)
         internal
         view
