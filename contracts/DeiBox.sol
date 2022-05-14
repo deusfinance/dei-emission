@@ -14,9 +14,9 @@ contract DeiBox is AccessControl {
 
     address public token;
 
-    constructor(address token_) {
+    constructor(address token_, address admin) {
         token = token_;
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
     function send(address recv, uint256 amount)
@@ -35,10 +35,18 @@ contract DeiBox is AccessControl {
         emit Took(from, amount);
     }
 
-    function emergencyWithdraw(address to)
+    function emergencyWithdrawETH(address to, uint256 amount)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        IERC20(token).safeTransfer(to, IERC20(token).balanceOf(address(this)));
+        payable(to).transfer(amount);
+    }
+
+    function emergencyWithdrawERC20(
+        address token_,
+        address to,
+        uint256 amount
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        IERC20(token_).safeTransfer(to, amount);
     }
 }

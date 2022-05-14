@@ -19,7 +19,7 @@ describe("Dei Box", async () => {
   before(async () => {
     [me, user1] = await ethers.getSigners();
     token = await deployTokenTest();
-    deiBox = await deployDeiBox(token.address);
+    deiBox = await deployDeiBox(token.address, me.address);
     minter = await deployMinter(token.address, deiBox.address, me.address);
     await deiBox.grantRole(await deiBox.LENDER_MANAGER(), me.address);
     await minter.setEmission(BigNumber.from("10000000000000000000"));

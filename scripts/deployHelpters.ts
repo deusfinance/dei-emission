@@ -10,9 +10,9 @@ async function deployTokenTest(): Promise<TokenTest> {
   return token;
 }
 
-async function deployDeiBox(tokenAddress: string): Promise<DeiBox> {
+async function deployDeiBox(tokenAddress: string, adminAddress: string): Promise<DeiBox> {
   let deiBoxFactory = await ethers.getContractFactory("DeiBox");
-  let deiBox = await deiBoxFactory.deploy(tokenAddress);
+  let deiBox = await deiBoxFactory.deploy(tokenAddress, adminAddress);
   await deiBox.deployed();
   return deiBox;
 }
