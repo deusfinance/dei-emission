@@ -7,29 +7,46 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract DeiBox is AccessControl {
     using SafeERC20 for IERC20;
 
-    event Sent(address reciever, uint256 amount);
-    event Took(address from, uint256 amount);
+    bytes32 public constant LENDER_MANAGER = keccak256("LENDER_MANAGER");
 
-    IERC20 public token;
+    event Sent(address lender, address reciever, uint256 amount);
+    event Took(address lender, address from, uint256 amount);
 
-    constructor(address token_) {
-        token = IERC20(token_);
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    address public token;
+
+    constructor(address token_, address admin) {
+        token = token_;
+        _setupRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
     function send(address recv, uint256 amount)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(LENDER_MANAGER)
     {
-        token.safeTransfer(recv, amount);
-        emit Sent(recv, amount);
+        IERC20(token).safeTransfer(recv, amount);
+        emit Sent(msg.sender, recv, amount);
     }
 
     function take(address from, uint256 amount)
         external
+        onlyRole(LENDER_MANAGER)
+    {
+        IERC20(token).safeTransferFrom(from, address(this), amount);
+        emit Took(msg.sender, from, amount);
+    }
+
+    function emergencyWithdrawETH(address to, uint256 amount)
+        external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        token.safeTransferFrom(from, address(this), amount);
-        emit Took(from, amount);
+        payable(to).transfer(amount);
+    }
+
+    function emergencyWithdrawERC20(
+        address token_,
+        address to,
+        uint256 amount
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        IERC20(token_).safeTransfer(to, amount);
     }
 }

@@ -28,6 +28,11 @@ const config: HardhatUserConfig = {
       {
         version: "0.8.13",
         settings: {
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
           optimizer: {
             enabled: true,
             runs: 100000,
@@ -147,7 +152,7 @@ const config: HardhatUserConfig = {
       gasMultiplier: 1.2,
     },
     fantom: {
-      url: `https://rpc.ankr.com/fantom/${process.env.ANKR_API_KEY}`,
+      url: `https://rpc.ftm.tools`,
       accounts: [
         process.env.MAIN_DEPLOYER_PRIVATE_KEY!,
         process.env.SECOND_DEPLOYER_PRIVATE_KEY!,

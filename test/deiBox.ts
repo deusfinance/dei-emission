@@ -8,6 +8,7 @@ import {
   deployMinter,
 } from "../scripts/deployHelpters";
 import { DeiBox, Minter, TokenTest } from "../typechain";
+import { setTimeToNextThursdayMidnight } from "./timeUtils";
 
 describe("Dei Box", async () => {
   let deiBox: DeiBox;
@@ -18,8 +19,9 @@ describe("Dei Box", async () => {
   before(async () => {
     [me, user1] = await ethers.getSigners();
     token = await deployTokenTest();
-    deiBox = await deployDeiBox(token.address);
+    deiBox = await deployDeiBox(token.address, me.address);
     minter = await deployMinter(token.address, deiBox.address, me.address);
+    await deiBox.grantRole(await deiBox.LENDER_MANAGER(), me.address);
     await minter.setEmission(BigNumber.from("10000000000000000000"));
   });
   it("Should have balance 10 tokens after first mint", async () => {

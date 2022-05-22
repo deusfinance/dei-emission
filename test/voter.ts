@@ -1,186 +1,206 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers, network } from "hardhat";
 import {
-  deployDeiBox,
-  deployMinter,
+  deployTestVe,
   deployTokenTest,
   deployVoter,
 } from "../scripts/deployHelpters";
-import { DeiBox, Minter, TokenTest, VeTest, Voter } from "../typechain";
+import {
+  DeiBox,
+  Minter__factory,
+  TokenTest,
+  VeTest,
+  Voter,
+  WhitelistVoting__factory,
+} from "../typechain";
+import { expect } from "chai";
+import {
+  getActivePeriod,
+  getCurrentTimeStamp,
+  increaseTime,
+  setTimeToNextThursdayMidnight,
+} from "./timeUtils";
+import { deployMockContract, MockContract } from "ethereum-waffle";
 
-describe("Voter", () => {
-  let minter: Minter;
+describe("Voter", async () => {
+  let me: SignerWithAddress;
+  let user1: SignerWithAddress;
+  let user2: SignerWithAddress;
   let ve: VeTest;
   let token: TokenTest;
   let voter: Voter;
-  let me: SignerWithAddress;
-  let deiBox: DeiBox;
 
-  let minVotes = BigNumber.from("1000000000000000000000");
-  let minSupportVotes = BigNumber.from("500000000000000000000");
-  let minSubmissionPower = BigNumber.from("500000000000000000000");
+  let mockMinter: MockContract;
+  let mockWhitelistVoting: MockContract;
 
-  let user2: SignerWithAddress;
-  let user3: SignerWithAddress;
-  let user4: SignerWithAddress;
+  let poolId1 = BigNumber.from(1);
+  let poolId2 = BigNumber.from(2);
+  let poolId3 = BigNumber.from(3);
 
-  // test ve token id and pool ids
-  let veTokenId1: BigNumber = BigNumber.from(1);
-  let veTokenId2: BigNumber = BigNumber.from(2);
-  let veTokenId3: BigNumber = BigNumber.from(3);
-  let veTokenId4: BigNumber = BigNumber.from(4);
+  let day = 86400;
+  let week = day * 7;
 
-  let poolId1: BigNumber = BigNumber.from(1);
-  let poolId2: BigNumber = BigNumber.from(2);
-  let poolId3: BigNumber = BigNumber.from(3);
+  let veTokenId1 = BigNumber.from(1);
+  let veTokenId2 = BigNumber.from(2);
+  let veTokenId1TotalPower = BigNumber.from("1000000000000000000000"); // 1000 tokens
+  let vetTokenId2TotalPower = BigNumber.from("500000000000000000000"); // 500 tokens
 
   async function setupUserVotingPowers() {
     await ve.connect(me).create_lock(
-      BigNumber.from("1000000000000000000000"), // 1000 token
+      veTokenId1TotalPower, // 1000 token #tokenId1
       BigNumber.from(4 * 365 * 24 * 60 * 60)
     );
 
-    await ve.connect(user2).create_lock(
-      BigNumber.from("500000000000000000000"), // 500 token
-      BigNumber.from(4 * 365 * 24 * 60 * 60)
-    );
-
-    await ve.connect(user3).create_lock(
-      BigNumber.from("5000000000000000000"), // 5 token
-      BigNumber.from(4 * 365 * 24 * 60 * 60)
-    );
-
-    await ve.connect(user4).create_lock(
-      BigNumber.from("0"), // 0 token
+    await ve.connect(user1).create_lock(
+      vetTokenId2TotalPower, // 500 token
       BigNumber.from(4 * 365 * 24 * 60 * 60)
     );
   }
-
-  async function deployTestVe() {
-    let veFactory = await ethers.getContractFactory("VeTest");
-    let _ve = await veFactory.deploy(token.address);
-    _ve.deployed();
-    return _ve;
+  async function setupWhitelist() {
+    await mockWhitelistVoting.mock.getLendingStatus
+      .withArgs(poolId1)
+      .returns(3); // approve poolId1
+    await mockWhitelistVoting.mock.getLendingStatus
+      .withArgs(poolId2)
+      .returns(2); // reject poolId2
+    await mockWhitelistVoting.mock.getLendingStatus
+      .withArgs(poolId3)
+      .returns(3); // approve poolId3
   }
 
-  before(async () => {
-    [me, user2, user3, user4] = await ethers.getSigners();
+  async function setupFreshEnvironment() {
+    [me, user1, user2] = await ethers.getSigners();
+
     token = await deployTokenTest();
-    deiBox = await deployDeiBox(token.address);
-    minter = await deployMinter(token.address, deiBox.address, me.address);
-    ve = await deployTestVe();
-    voter = await deployVoter(
-      minter.address,
-      ve.address,
-      minSubmissionPower,
-      minVotes,
-      minSupportVotes,
-      me.address
+    ve = await deployTestVe(token.address);
+
+    mockMinter = await deployMockContract(me, Minter__factory.abi);
+    mockWhitelistVoting = await deployMockContract(
+      me,
+      WhitelistVoting__factory.abi
     );
 
     await setupUserVotingPowers(); // lock veTOKENS
-  });
-  it("votes on lending #1 should be zero", async () => {
-    let totalVotes = await (await voter.proposals(poolId1)).votes;
-    expect(totalVotes).to.equal(0);
-  });
-  it("should fail to vote on lending #1 before it's submitted", async () => {
-    let voteTx = voter
-      .connect(me)
-      .vote(poolId1, [veTokenId1], [BigNumber.from(100)]);
-    await expect(voteTx).to.be.revertedWith("Voter: LENDING_NOT_SUBMITTED");
-  });
-  it("should submit lending #1 for voting", async () => {
-    await voter.submitLending(poolId1, veTokenId1);
-    let status = await (await voter.proposals(poolId1)).status;
-    expect(status).to.equal(BigNumber.from(1)); // ACTIVE
-  });
-  it("should fail to submit same lending more than once", async () => {
-    let submitTx = voter.submitLending(poolId1, veTokenId1);
-    await expect(submitTx).to.be.revertedWith("Voter: ALREADY_SUBMITTED");
-  });
-  it("should fail to vote with tokenId that the sender is not owner of has approve of", async () => {
-    let voteTx = voter
-      .connect(user2)
-      .vote(poolId1, [veTokenId1], [BigNumber.from(100)]);
-    await expect(voteTx).to.be.revertedWith("Voter: TOKEN_ID_NOT_APPROVED");
-  });
-  it("should vote 100 power on lending #1", async () => {
-    let votingWeight = BigNumber.from(100);
-    await voter.connect(me).vote(poolId1, [veTokenId1], [votingWeight]);
-    let pool1Votes = await voter.getTotalVotesOfLending(poolId1);
-    expect(votingWeight).to.equal(pool1Votes);
-  });
-  it("should vote -10 power on lending #2", async () => {
-    await voter
-      .connect(user2)
-      .vote(poolId1, [veTokenId2], [BigNumber.from(-10)]);
+    await setupWhitelist(); // approve pool1, reject pool2
 
-    let pool1Votes = await voter.getTotalVotesOfLending(poolId1);
-    expect(pool1Votes).to.be.equal(BigNumber.from(90));
-  });
-  it("should fail to vote on lending #2 ", async () => {
-    let voteTx = voter
-      .connect(me)
-      .vote(poolId2, [veTokenId1], [BigNumber.from(100)]);
-    await expect(voteTx).to.be.revertedWith("Voter: LENDING_NOT_SUBMITTED");
-  });
-  it("should alow lending #2 to be submitted", async () => {
-    await voter.connect(me).submitLending(poolId2, veTokenId1);
-    let status = await (await voter.proposals(poolId2)).status;
-    expect(status).to.equal(BigNumber.from(1)); // ACTIVE
-  });
-  it("should decrease tokenId voting power after successful vote", async () => {
-    let weight = BigNumber.from(10);
-    let beforeVotePower = await voter
-      .connect(user2)
-      .getRemainingVotePower(poolId2, veTokenId2);
-    await voter.connect(user2).vote(poolId2, [veTokenId2], [weight]);
-    let afterVotePower = await voter
-      .connect(user2)
-      .getRemainingVotePower(poolId2, veTokenId2);
-    let diff = beforeVotePower.sub(afterVotePower);
-    expect(diff.gte(weight)).to.be.true; // at least weight amount must be the diff
-  });
-  it("should fail to use vote weight more than actual vote power", async () => {
-    let weight = BigNumber.from("5000000000000000001");
-    let voteTx = voter.connect(user3).vote(poolId1, [veTokenId3], [weight]);
-    await expect(voteTx).to.be.revertedWith("Voter: INSUFFICIENT_VOTING_POWER");
-  });
-  it("Should reject lending#1 after 1 week", async () => {
-    await network.provider.send("evm_increaseTime", [86400 * 7]); // 1 week
-    await voter.execute(poolId1);
-    let status = await (await voter.proposals(poolId1)).status;
-    expect(status).to.equal(BigNumber.from(2)); // REJECTED
-  });
-  it("Should set variables", async () => {
-    await voter.setMinVotes(BigNumber.from("1000000000000000000000"));
-    await voter.setMinSupportVotes(BigNumber.from("500000000000000000000"));
-    await voter.setProposalActiveTime(BigNumber.from(5 * 60 * 60));
-    expect(await voter.connect(me).minVotes()).to.equal(
-      BigNumber.from("1000000000000000000000") // 1000
+    voter = await deployVoter(
+      ve.address,
+      mockWhitelistVoting.address,
+      mockMinter.address
     );
-    expect(await voter.connect(me).minSupportVotes()).to.equal(
-      BigNumber.from("500000000000000000000") // 500
-    );
-    expect(await voter.activeTime()).to.equal(BigNumber.from(5 * 60 * 60));
+
+    await setTimeToNextThursdayMidnight();
+  }
+
+  describe("Test Voting Mechanism", async () => {
+    before(async () => {
+      await setupFreshEnvironment();
+    });
+    it("should fail to vote if lending is not approved", async () => {
+      let voteTx = voter.vote(veTokenId1, [poolId2], ["200"]);
+      await expect(voteTx).to.be.revertedWith("Voter: NOT_APPROVED");
+    });
+    it("should return correct active period in the beginning of the week", async () => {
+      await setTimeToNextThursdayMidnight();
+      let now = await getCurrentTimeStamp();
+      let activePeriod = await voter.getActivePeriod();
+      expect(activePeriod).to.equal(now);
+    });
+    it("should return same active period after five days", async () => {
+      let beforePeriod = await voter.getActivePeriod();
+      await increaseTime(day * 5);
+      let afterPeriod = await voter.getActivePeriod();
+      expect(beforePeriod).to.equal(afterPeriod);
+    });
+    it("should return next active period after 1 week", async () => {
+      await setTimeToNextThursdayMidnight();
+      let beforePeriod = await voter.getActivePeriod();
+      await increaseTime(week);
+      let afterPeriod = await voter.getActivePeriod();
+      expect(afterPeriod.sub(beforePeriod)).to.equal(week);
+    });
+    it("should return 0 power used in active period if tokenId not yet voted", async () => {
+      let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId1);
+      expect(powerUsed).to.eq(0);
+    });
+    it("should return used power after vote", async () => {
+      let weight = BigNumber.from(10);
+      await voter.vote(veTokenId1, [poolId1], [weight]);
+      let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId1);
+      expect(weight).to.eq(powerUsed);
+    });
+    it("should return correct remaining power in active period", async () => {
+      let powerUsed = BigNumber.from(10);
+      let trueRemainingPower = veTokenId1TotalPower.sub(powerUsed);
+      let remainingPower = await voter.getRemainingPowerInActivePeriod(
+        veTokenId1
+      );
+      expect(remainingPower).to.eq(trueRemainingPower);
+    });
+    it("should return correct power used for negative weights", async () => {
+      let weight = BigNumber.from(-10);
+      await voter.vote(veTokenId1, [poolId1], [weight]);
+      let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId1);
+      expect(BigNumber.from(20)).to.eq(powerUsed); // 10 power used in previous power test + 10 power in this test = 20 power total
+    });
+    it("vote of one tokenId should not effect powers of other tokens", async () => {
+      let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId2);
+      expect(powerUsed).to.eq(0);
+    });
+    it("vote this period should not effect next week votes", async () => {
+      await setTimeToNextThursdayMidnight();
+      let powerUsed = await voter.getPowerUsedInActivePeriod(veTokenId1);
+      expect(powerUsed).to.eq(0);
+    });
+    it("should fail to vote with weights exceeding max vote power of user in active period", async () => {
+      let weight = vetTokenId2TotalPower.add(1);
+      let vote = voter.connect(user1).vote(veTokenId2, [poolId1], [weight]);
+      await expect(vote).to.be.revertedWith("Voter: INSUFFICIENT_POWER");
+    });
+    it("should able to vote if lending is approved", async () => {
+      let weight = BigNumber.from(100);
+      await mockMinter.mock.mintAmount.returns(0);
+      await voter.connect(user1).vote(veTokenId2, [poolId1], [weight]);
+      let lendingVotes = await voter.getLendingVotesInActivePeriod(poolId1);
+      expect(lendingVotes).to.eq(weight);
+    });
+    it("should update total votes correctly", async () => {
+      let u1w1 = BigNumber.from(1000);
+      let u1w2 = BigNumber.from(-2000);
+      let beforeTotalPower = await voter.getTotalPowerInActivePeriod();
+      await mockMinter.mock.mintAmount.returns(0);
+      await voter
+        .connect(me)
+        .vote(veTokenId1, [poolId1, poolId3], [u1w1, u1w2]);
+
+      let totalWeights = await voter.getTotalPowerInActivePeriod();
+      expect(totalWeights.sub(beforeTotalPower)).to.eq(u1w1.sub(u1w2));
+    });
   });
-  it("Should pass lending#2 after 1 week", async () => {
-    await voter
-      .connect(me)
-      .vote(poolId2, [veTokenId1], ["1000000000000000000000"]);
-    await voter
-      .connect(user2)
-      .vote(poolId2, [veTokenId2], ["-200000000000000000000"]);
-    await voter.execute(poolId2);
-    let status = await (await voter.proposals(poolId2)).status;
-    expect(status).to.equal(BigNumber.from(3));
+
+  describe("Test cap manager", async () => {
+    before(async () => {
+      await setupFreshEnvironment();
+    });
+    it("should update cap of poolId #1 after 1 week", async () => {
+      let weight = BigNumber.from(1000);
+      await mockMinter.mock.mintAmount.returns(weight);
+      await voter.connect(me).vote(veTokenId1, [poolId1], [weight]);
+      await increaseTime(8 * 24 * 60 * 60); // 8 days
+      let cap = await voter.getMaxCap(poolId1);
+      expect(cap).to.eq(weight);
+    });
+    it("should correctly update caps after another voting round", async () => {
+      let weight = BigNumber.from(1000);
+      await voter.connect(me).vote(veTokenId1, [poolId1], [weight]); // 1000 + 500
+      await voter.connect(user1).vote(veTokenId2, [poolId3], [weight]); // 500
+      await increaseTime(8 * 24 * 60 * 60); // 8 days
+      let cap1 = await voter.getMaxCap(poolId1);
+      let cap3 = await voter.getMaxCap(poolId3);
+      expect(cap1).to.eq(BigNumber.from(1500));
+      expect(cap3).to.eq(BigNumber.from(500));
+
+    })
   });
-  it("Shouldn't let submit proposal without veDEUS balance", async () => {
-    let submitTx = voter.connect(user4).submitLending(poolId3, veTokenId4);
-    await expect(submitTx).to.be.revertedWith("Voter: INSUFFICIENT_POWER");
-  });
-  // todo: change the names to whitelister
 });
