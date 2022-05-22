@@ -13,8 +13,8 @@ contract Voter {
 
     mapping(uint256 => mapping(uint256 => uint256)) public powerUsed; // period => (tokenId => powerUsed)
     mapping(uint256 => mapping(uint256 => int256)) public lendingVotes; // period => (lendingId => votes)
-    mapping(uint256 => uint256) public caps; // confirmed caps
-    mapping(uint256 => uint256) public pendingPeriods;
+    mapping(uint256 => uint256) public caps; // lendingId => confirmed caps
+    mapping(uint256 => uint256) public pendingPeriods; // lendingId => pendingPeriod
     mapping(uint256 => uint256) public totalPowers; // period => total powers voted
     uint256 internal constant WEEK = 7 days; // allows minting once per week (reset every Thursday 00:00 UTC)
 
@@ -137,7 +137,7 @@ contract Voter {
 
         uint256 pendingPeriod = pendingPeriods[lendingId];
         if (period > pendingPeriod) {
-            caps[pendingPeriod] = getCapAtPeriod(lendingId, pendingPeriod);
+            caps[lendingId] += getCapAtPeriod(lendingId, pendingPeriod);
             pendingPeriods[lendingId] = period;
         }
     }
