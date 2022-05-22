@@ -3,7 +3,7 @@ pragma solidity 0.8.13;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./interfaces/IDei.sol";
+import "./interfaces/IDEI.sol";
 
 /// @title Minter Contract
 /// @author DEUS Finance
