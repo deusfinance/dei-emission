@@ -1,37 +1,42 @@
-# DEI Emission
+# DEI Emission [![license: LGPL3.0](https://img.shields.io/badge/license-LGPL3.0-yellow.svg)](https://opensource.org/licenses/lgpl-3.0) [![npm version](https://img.shields.io/npm/v/@uniswap/v3-core/latest.svg)](https://www.npmjs.com/package/@uniswap/v3-core/v/latest) 
 
-- Minter
+<p align="center">
+  <img width="200" height="200" src="https://app.deus.finance/tokens/dei.svg">
+</p>
 
-  Mints DEI and deposit into the DEI Box
+DEI Emission to the lending pools, compatible with [general lender](https://github.com/deusfinance/lending-platform))
 
-- DEI Box
+### Pre Requisites
 
-  Sends/Takes DEI from Lender
+You will need the following software on your machine:
 
-- Voter
+- [Git](https://git-scm.com/downloads)
+- [Node.Js](https://nodejs.org/en/download/)
 
-  Sets Lendings cap based on votes
+In addition, familiarity with [Solidity](https://soliditylang.org/) and [Hardhat](https://hardhat.org) is requisite.
 
-- Whitelist Voting
+### Set Up
 
-  Whitelist the new lendings to be votable
+Install the dependencies:
 
-## Minter
+```bash
+$ npm install
+```
 
-- [x] Mints DEI and deposit into the DEI Box
+Create a `.env` file and follow the `.sample.env` file to add the requisite environment variables, then run the:
 
-## DEI Box
+```bash
+$ npx hardhat test
+```
 
-- [x] Sends DEI
-- [x] Takes DEI
+Now you can start making changes.
 
-## Voter
+## Contributing
 
-- [ ] Vote by veDEUS
-- [ ] Update Lendings cap
+Feel free to dive in! [Open](https://github.com/deusfinance/dei-emission/issues/new) an issue,
+[start](https://github.com/deusfinance/dei-emission/discussions/new) a discussion or submit a PR. For any concerns or
+feedback, join us on [Discord](https://discord.gg/NWfzTqeV).
 
-## Whitelist Voting
+## Security
 
-- [ ] Make proposal
-- [ ] Vote on proposal
-- [ ] Pass/Reject the proposal
+For security concerns, please email [admin@deus.finance](mailto:admin@deus.finance).
