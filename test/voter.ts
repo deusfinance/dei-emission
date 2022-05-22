@@ -16,6 +16,7 @@ import {
 } from "../typechain";
 import { expect } from "chai";
 import {
+  getActivePeriod,
   getCurrentTimeStamp,
   increaseTime,
   setTimeToNextThursdayMidnight,
@@ -159,6 +160,7 @@ describe("Voter", async () => {
     });
     it("should able to vote if lending is approved", async () => {
       let weight = BigNumber.from(100);
+      await mockMinter.mock.mintAmount.returns(0);
       await voter.connect(user1).vote(veTokenId2, [poolId1], [weight]);
       let lendingVotes = await voter.getLendingVotesInActivePeriod(poolId1);
       expect(lendingVotes).to.eq(weight);
@@ -167,6 +169,7 @@ describe("Voter", async () => {
       let u1w1 = BigNumber.from(1000);
       let u1w2 = BigNumber.from(-2000);
       let beforeTotalPower = await voter.getTotalPowerInActivePeriod();
+      await mockMinter.mock.mintAmount.returns(0);
       await voter
         .connect(me)
         .vote(veTokenId1, [poolId1, poolId3], [u1w1, u1w2]);
@@ -180,9 +183,13 @@ describe("Voter", async () => {
     before(async () => {
       await setupFreshEnvironment();
     });
-    it("Should update total votes correctly", async () => {
+    it("should update cap of poolId #1 after 1 week", async () => {
       let weight = BigNumber.from(1000);
+      await mockMinter.mock.mintAmount.returns(weight);
       await voter.connect(me).vote(veTokenId1, [poolId1], [weight]);
+      await increaseTime(8 * 24 * 60 * 60); // 8 days
+      let cap = await voter.getMaxCap(poolId1);
+      expect(cap).to.eq(weight);
     });
   });
 });

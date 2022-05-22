@@ -2,6 +2,7 @@
 pragma solidity 0.8.13;
 
 import "./interfaces/IWhitelistVoting.sol";
+import "./interfaces/IMinter.sol";
 import "./interfaces/Ive.sol";
 
 contract Voter {
@@ -12,8 +13,10 @@ contract Voter {
 
     mapping(uint256 => mapping(uint256 => uint256)) public powerUsed; // period => (tokenId => powerUsed)
     mapping(uint256 => mapping(uint256 => int256)) public lendingVotes; // period => (lendingId => votes)
+    mapping(uint256 => uint256) public caps; // confirmed caps
+    mapping(uint256 => uint256) public pendingPeriods;
     mapping(uint256 => uint256) public totalPowers; // period => total powers voted
-    uint256 internal constant WEEK = 86400 * 7; // allows minting once per week (reset every Thursday 00:00 UTC)
+    uint256 internal constant WEEK = 7 days; // allows minting once per week (reset every Thursday 00:00 UTC)
 
     /* ========== CONSTRUCTOR ========== */
 
@@ -29,23 +32,27 @@ contract Voter {
 
     /* ========== PUBLIC VIEWS ========== */
 
-    function vote(
-        uint256 tokenId,
-        uint256[] memory lendingIds,
-        int256[] memory weights
-    ) external {
-        require(
-            Ive(ve).isApprovedOrOwner(msg.sender, tokenId),
-            "Voter: TOKEN_ID_NOT_APPROVED"
-        );
-        require(
-            lendingIds.length == weights.length,
-            "Voter: LENDING_WEIGHT_MISMATCH"
-        );
-
-        for (uint256 i = 0; i < lendingIds.length; i++) {
-            _vote(tokenId, lendingIds[i], weights[i], getActivePeriod());
+    function getMaxCap(uint256 lendingId) external view returns (uint256) {
+        uint256 cap = caps[lendingId];
+        uint256 pendingPeriod = pendingPeriods[lendingId];
+        if (getActivePeriod() > pendingPeriod) {
+            cap += getCapAtPeriod(lendingId, pendingPeriod);
         }
+        return cap;
+    }
+
+    function getCapAtPeriod(uint256 lendingId, uint256 period)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 votesAtPeriod = lendingVotes[period][lendingId] < 0
+            ? 0
+            : uint256(lendingVotes[period][lendingId]);
+        if (totalPowers[period] == 0) return 0;
+        return
+            (votesAtPeriod * IMinter(minter).mintAmount(period)) /
+            totalPowers[period];
     }
 
     function getTotalPowerInActivePeriod() public view returns (uint256) {
@@ -89,6 +96,25 @@ contract Voter {
         return totalPower - powerUsed[period][tokenId];
     }
 
+    function vote(
+        uint256 tokenId,
+        uint256[] memory lendingIds,
+        int256[] memory weights
+    ) external {
+        require(
+            Ive(ve).isApprovedOrOwner(msg.sender, tokenId),
+            "Voter: TOKEN_ID_NOT_APPROVED"
+        );
+        require(
+            lendingIds.length == weights.length,
+            "Voter: LENDING_WEIGHT_MISMATCH"
+        );
+
+        for (uint256 i = 0; i < lendingIds.length; i++) {
+            _vote(tokenId, lendingIds[i], weights[i], getActivePeriod());
+        }
+    }
+
     function _vote(
         uint256 tokenId,
         uint256 lendingId,
@@ -108,6 +134,12 @@ contract Voter {
         powerUsed[period][tokenId] += power;
         totalPowers[period] += power;
         lendingVotes[period][lendingId] += weight;
+
+        uint256 pendingPeriod = pendingPeriods[lendingId];
+        if (period > pendingPeriod) {
+            caps[pendingPeriod] = getCapAtPeriod(lendingId, pendingPeriod);
+            pendingPeriods[lendingId] = period;
+        }
     }
 
     function abs(int256 x) private pure returns (uint256) {
