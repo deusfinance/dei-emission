@@ -21,11 +21,15 @@ pragma solidity 0.8.13;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "./interfaces/IVoter.sol";
+
 /// @title Cap Manager
 /// @author DEUS Finance
 /// @notice Manages lending's caps in Lender contract
 contract CapManager is AccessControl {
     using SafeERC20 for IERC20;
+
+    address voter;
 
     event SetDailyMaxCap(uint, uint, uint);
 
@@ -35,7 +39,8 @@ contract CapManager is AccessControl {
 
     constructor(
         address manager,
-        address admin
+        address admin,
+        address voter_
     ) {
         require(
             manager != address(0) && admin != address(0),
@@ -43,6 +48,7 @@ contract CapManager is AccessControl {
         );
         _setupRole(MANAGER_ROLE, manager);
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
+        voter = voter_;
     }
 
     /// @notice Sets new dailyMaxCap for given lending
@@ -61,7 +67,7 @@ contract CapManager is AccessControl {
         view
         returns (uint256)
     {
-        // TODO: read votes from voter
+        return IVoter(voter).getMaxCap(collateralIndex);
     }
 
     /// @notice Returns dailyMaxCap for given lending
