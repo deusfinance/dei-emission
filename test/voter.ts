@@ -191,5 +191,16 @@ describe("Voter", async () => {
       let cap = await voter.getMaxCap(poolId1);
       expect(cap).to.eq(weight);
     });
+    it("should correctly update caps after another voting round", async () => {
+      let weight = BigNumber.from(1000);
+      await voter.connect(me).vote(veTokenId1, [poolId1], [weight]); // 1000 + 500
+      await voter.connect(user1).vote(veTokenId2, [poolId3], [weight]); // 500
+      await increaseTime(8 * 24 * 60 * 60); // 8 days
+      let cap1 = await voter.getMaxCap(poolId1);
+      let cap3 = await voter.getMaxCap(poolId3);
+      expect(cap1).to.eq(BigNumber.from(1500));
+      expect(cap3).to.eq(BigNumber.from(500));
+
+    })
   });
 });
